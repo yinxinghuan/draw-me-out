@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "projectId": "draw-me-out",
   "uuid": "c699e284-58a9-43ca-8edf-223cd69588c9",
-  "sourceCommit": null,
+  "sourceCommit": "f65221a417d7468bc6f20aae2f443ba759889cb9",
   "buildCommand": "npm run build",
   "distPath": "dist",
   "posterPath": "public/poster.png",
@@ -13,7 +13,10 @@
     "test:ending"
   ],
   "deployment": {
-    "performed": false,
-    "owner": "receiving-team-publisher"
+    "performed": true,
+    "owner": "codex-publisher",
+    "productionUrl": "https://game.aiwaves.tech/c699e284-58a9-43ca-8edf-223cd69588c9/",
+    "mirrorUrl": "https://yinxinghuan.github.io/draw-me-out/",
+    "catalogCommit": "d0c19b4"
   }
 }
