@@ -1,0 +1,129 @@
+{
+  "$schema": "../../.agents/skills/build-stateful-story-game/assets/world-brief.schema.json",
+  "game": {
+    "id": "draw-me-out",
+    "titleZh": "请把我画出去",
+    "titleEn": "DRAW ME OUT",
+    "mode": "open-world",
+    "languages": ["zh", "en"]
+  },
+  "experience": {
+    "playerFantasy": "You are the only person who remembers being real, trapped inside an image model's latent space and escaping through unstable generated worlds.",
+    "emotionalPromise": "A brisk, funny and increasingly moving escape adventure where visual inconsistency becomes the mystery, and every strange world tests what makes you yourself.",
+    "commonKnowledgeBoundary": "The story uses familiar ideas such as pictures, loading, undo, drafts and deleted files; it never requires knowledge of machine learning or image-generation terminology.",
+    "openingObjective": "Survive the first unfinished picture, reach the stable latent hub, and find the first fragment of a route back to reality."
+  },
+  "world": {
+    "fixedRules": [
+      "The player's complete visible identity comes from the current user avatar and cannot be silently reassigned to another character, creature, reflection or prop.",
+      "The Latent Layer always returns to the same black-glass plain, white horizon, red cursor filament and unfinished picture windows, even while individual picture worlds change style radically.",
+      "Items, companions, promises, injuries, revealed memories and Reality Coordinate Fragments persist across worlds until a visible event changes them.",
+      "Characters may gradually notice choices, retries, captions and generation failures, but fourth-wall knowledge must be earned and cannot appear as random omniscience.",
+      "The player's main goal is to reach reality, while the cost of escape and the truth of that reality remain open to discovery and choice."
+    ],
+    "generationRules": [
+      "AI may create new picture worlds, local contradictions, inhabitants and exits while preserving the Latent Layer, persistent cast and confirmed state.",
+      "Every turn must change a location, threat, relationship, item, coordinate fragment, identity fact or immediate objective; empty confirmation loops are forbidden.",
+      "A picture-world visit lasts three to five decisions, with at most one optional side thread lasting one or two decisions before a concrete consequence or return.",
+      "Humor comes from worlds taking visual and bureaucratic rules literally, not from unrelated memes or constant jokes.",
+      "Endings are generated from accumulated identity facts, companions, Undo Key costs, saved worlds, abandoned worlds and coordinate fragments rather than selected from only three fixed endings."
+    ],
+    "maxActiveThreads": 2
+  },
+  "stats": [
+    {
+      "id": "self",
+      "labelZh": "自我",
+      "labelEn": "Self",
+      "min": 0,
+      "max": 100,
+      "initial": 82,
+      "display": "bar",
+      "dangerDirection": "low",
+      "warningAt": 35,
+      "dangerAt": 12,
+      "maxDelta": 20
+    },
+    {
+      "id": "compute",
+      "labelZh": "算力",
+      "labelEn": "Compute",
+      "min": 0,
+      "max": 100,
+      "initial": 65,
+      "display": "bar",
+      "dangerDirection": "low",
+      "warningAt": 25,
+      "dangerAt": 5,
+      "maxDelta": 24
+    },
+    {
+      "id": "trace",
+      "labelZh": "追踪",
+      "labelEn": "Trace",
+      "min": 0,
+      "max": 100,
+      "initial": 18,
+      "display": "bar",
+      "dangerDirection": "high",
+      "warningAt": 65,
+      "dangerAt": 90,
+      "maxDelta": 20
+    }
+  ],
+  "choiceIntents": [
+    "exploit or rewrite a picture-world rule",
+    "talk, recruit, protect or challenge a character",
+    "observe, retreat or spend a persistent item"
+  ],
+  "signatureItem": {
+    "nameZh": "撤销键",
+    "nameEn": "Undo Key",
+    "ability": "Reverses one important consequence, restores a deleted character, or reopens a collapsed route.",
+    "limitOrCost": "It has three charges; every use visibly deletes one memory, relationship or confirmed fact from the player's history.",
+    "provenance": "Found embedded in the first unfinished image, carrying scratches that suggest the player has used it before."
+  },
+  "danger": {
+    "minSafeTurns": 2,
+    "maxSafeTurns": 4,
+    "cooldownTurns": 2,
+    "physicalCombat": "rare",
+    "methods": [
+      "read and exploit the world's visual contradiction",
+      "protect a companion while bargaining with the local rule",
+      "spend compute, an item or a memory to force an exit"
+    ],
+    "threatPalette": [
+      "the style begins infecting the player's identity and erasing recognizable details",
+      "an optimizer replaces distinctive people with the same smiling default person",
+      "rejected prompt debris gathers into a creature that completes unfinished scenes incorrectly",
+      "the system notices fourth-wall awareness and attempts to repair the wrong character",
+      "a picture world abruptly changes genre while its inhabitants remember both incompatible versions",
+      "an inhabitant realizes they are background decoration and tries to take the player's place at the exit"
+    ],
+    "fallbackStatId": "trace",
+    "fallbackAmount": 14
+  },
+  "visuals": {
+    "material": "wayfarer",
+    "artDirection": "cinematic generated-picture odyssey framed by a stable black-glass latent hub, crisp editorial UI, deliberate radical style shifts between worlds, full-avatar identity preserved",
+    "entryScene": "an unfinished rain-soaked city image still assembling around the player, duplicated passersby and unpainted white gaps, one obvious exit door opening into raw color, no readable text",
+    "sceneImageDirection": "4:5 cinematic narrative image, one immediate action, exact current event rather than cover motifs; Latent Layer uses black glass, white horizon, red cursor filament and unfinished picture windows, while portal worlds deliberately change medium and genre; no UI, logos, readable text or pseudo-writing",
+    "itemImageDirection": "museum-like generated artifact study against black glass with a thin red cursor filament, exact object state and wear, no people, UI, logos, readable text or pseudo-writing"
+  },
+  "audio": {
+    "mood": "dry electronic clicks, reversed pencil scratches, soft sub-bass drift in the hub, and sharply distinct short musical palettes for each picture world",
+    "bpm": 78
+  },
+  "ending": {
+    "type": "true-ending",
+    "failureConsequences": [
+      "temporary style infection",
+      "lost compute",
+      "higher system trace",
+      "a companion or route becomes separated rather than erased",
+      "a memory or relationship is traded through the Undo Key",
+      "return to the Latent Layer with the failed world's consequences preserved"
+    ]
+  }
+}
