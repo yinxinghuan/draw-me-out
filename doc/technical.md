@@ -29,6 +29,7 @@
 - `src/shared/runtime/useGenVideo.ts`：统一媒体服务 9:16、5 秒视频任务客户端；本游戏默认不启用。
 - `src/shared/save/useGameSave.ts`：AIGram 与 localStorage 双路径存档。
 - `public/alteru-storage-scope.js`、`src/alteru-storage-scope.d.ts`：按当前部署 UUID 隔离浏览器存储，防止同域游戏和 Remix 互相读取本地状态。
+- `worker/index.js`：自托管部署的最小健康检查入口；不保存剧情、身份或媒体数据，也不创建第二套后端状态。
 - `src/story/StoryShell.tsx`：入口、恢复存档、三阶段信息顺序、Civic 舞台、抽屉、分页、选项和输入。
 - `src/story/story.less`：Civic/Living 两种表现层、响应式布局、状态和动效。
 - `src/story/audio/`：合成音乐与音效。
