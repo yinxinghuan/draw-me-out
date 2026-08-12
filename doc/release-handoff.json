@@ -18,16 +18,16 @@
     "_qa/playthrough.mjs"
   ],
   "deployment": {
-    "performed": true,
+    "performed": false,
     "owner": "codex-publisher",
     "productionUrl": "https://game.aiwaves.tech/c699e284-58a9-43ca-8edf-223cd69588c9/",
     "mirrorUrl": "https://yinxinghuan.github.io/draw-me-out/",
     "catalogCommit": "d0c19b4",
     "verifiedBundle": "assets/index-CsuuY6nY.js",
-    "verifiedAt": "2026-08-12"
+    "verifiedAt": null
   },
   "handoff": {
-    "currentState": "The deterministic domain-rule layer for the opening through the first paid Undo is the current dual-deployment release. Production and GitHub Pages are built from the same source release.",
+    "currentState": "The deterministic domain-rule layer for the opening through the first paid Undo is committed locally as a release candidate. Production and GitHub Pages still run c7ce8f7; this candidate has not been pushed or deployed.",
     "latestFixes": [
       "The newest visible scene image is generated before older queued scenes, so rapid choices do not accumulate invisible image work ahead of the current loader.",
       "An interrupted generating image is restored to queued on reload; each attempt has a 60-second cap and preserves its idempotent request id for recovery.",
@@ -43,6 +43,7 @@
       "Test fast consecutive choices in the real AlterU WebView and confirm the current image finishes or exposes Retry within about 60 seconds.",
       "Restart once and confirm Little Remnant is absent from the roster before its visible debut and present afterward.",
       "Continue auditing later named characters so dialogue and choices never reference a name before a visible debut.",
+      "Before publishing this candidate, push the repository, deploy both targets and verify both live bundles contain the recorded candidate bundle markers.",
       "On the next story expansion, extend deterministic rules only where an action changes scarce resources, one-time rewards, route locks or permanent costs.",
       "Preserve the browser regression path covering duplicate clue rejection, free Undo rejection and explicit permanent memory cost."
     ]
