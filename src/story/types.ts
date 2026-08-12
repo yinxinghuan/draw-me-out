@@ -31,7 +31,7 @@ export interface StatDefinition {
 }
 export interface SkillDefinition { id: string; label: string; value: number }
 export type CharacterStatus = 'known' | 'companion' | 'departed'
-export interface CharacterDefinition { id: string; name: string; role: string; vitality: number; stress: number; skills: SkillDefinition[]; detail?: string; lore?: string; initialStatus?: CharacterStatus }
+export interface CharacterDefinition { id: string; name: string; role: string; vitality: number; stress: number; skills: SkillDefinition[]; detail?: string; lore?: string; initialStatus?: CharacterStatus; hiddenUntilIntroduced?: boolean }
 export interface StoryCharacter extends CharacterDefinition {
   status: CharacterStatus
   origin: 'cartridge' | 'generated'

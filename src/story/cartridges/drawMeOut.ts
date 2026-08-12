@@ -286,6 +286,7 @@ function build(locale: Locale): StoryCartridge {
         '真正的潜在表示是程序可读、人类无法直接理解的高维信息，不是物理地点或空白画布。画外之地只是主角感官的失败翻译：没有地面、地平线、方向、比例和远近关系，只偶尔读出颜色关系、边缘、材质或动作残影。主角把无法读取的部分感受成无边深黑，玩家在这里以占画面高度 30–36% 的失重全身形象出现，能看清头像中的完整身份特征但不使用大特写。',
         '物品、伙伴、承诺、伤势、记忆、已确认事实和回家线索跨世界与存档持续存在，除非可见事件明确改变。',
         '角色对选项、读档、字幕与生成失败的第四堵墙认知必须逐层获得，不能随机全知。',
+        '未登场角色不能出现在人物面板、对话、目标或选项中。首次出现必须先让玩家看见它、用日常语言说清外形与名字来源，再允许相关互动；加入同行也必须在正文中明确发生。',
         '主线目标是回到现实，但出口代价与现实是否仍是另一张图必须由探索和最终选择揭示。',
       ] : [
         'The player is an ordinary person with no technical background. The protagonist cannot suddenly understand models, sampling, parameters, composition, or system architecture and may only reason from visible events.',
@@ -293,6 +294,7 @@ function build(locale: Locale): StoryCartridge {
         'The actual latent representation is high-dimensional machine-readable information, not a physical place or empty canvas. The outside is only the protagonist’s failed perceptual translation: no floor, no horizon, no direction, no stable scale, and no readable depth, only occasional color relations, edges, material hints, or motion traces. Unreadable content is perceived as a boundless matte-black non-space. The player appears as a weightless full-body figure 30–36 percent of frame height so the avatar’s complete identity traits remain readable without becoming a close-up.',
         'Items, companions, promises, injuries, memories, confirmed facts, and Home Clues persist across worlds and saves until a visible event changes them.',
         'Fourth-wall awareness of choices, reloads, captions, and generation failure must be earned in layers rather than appear as random omniscience.',
+        'An unmet character cannot appear in the roster, dialogue, objective, or choices. Their debut must first show a visible form and explain the everyday source of their name; only then may choices address them, and joining the party must visibly happen in prose.',
         'The main goal is to return to reality, while the exit cost and whether reality is another image are revealed through exploration and final choice.',
       ],
       generationRules: zh ? [
@@ -304,6 +306,7 @@ function build(locale: Locale): StoryCartridge {
         '幽默来自世界认真执行荒诞视觉或行政规则，不使用无关网络梗，也不把每句话都写成笑话。',
         '结局依据身份事实、伙伴、撤销代价、保存与放弃的世界、坐标和最后自由行动生成，不能只在三个固定尾声中选择。',
         '正文首句先写行动的直接后果，最多再写两个短节拍；图片提示只描述当前事件，绝不附带入口或封面构图。',
+        '新角色首次出现必须遵守“看见外形—知道名字来源—明确当前关系—再给互动选项”的顺序；选项不得引用尚未在正文中出场的名字。',
       ] : [
         'Generate new picture worlds, local problems, residents, items, and exits while preserving the place outside pictures, fixed cast, and confirmed state.',
         'Use everyday language for all player-visible text. Introduce at most one new idea per screen, show a concrete experience before naming it, and never explain events with latent space, sampling, weights, optimizers, rendering, prompts, model parameters, or similar technical terms.',
@@ -313,6 +316,7 @@ function build(locale: Locale): StoryCartridge {
         'Humor comes from worlds seriously enforcing absurd visual or bureaucratic rules, not unrelated memes or a joke in every line.',
         'Generate endings from identity facts, companions, Undo costs, saved and abandoned worlds, coordinates, and the final free action rather than only three fixed epilogues.',
         'The first sentence states the direct action consequence, followed by at most two short beats; image prompts describe only the current event and never carry entry or cover composition.',
+        'A new character debut follows this order: visible form, source of the name, present relationship, then interaction choices. Never put a name in a choice before visible prose has introduced it.',
       ],
       choiceIntents: zh
         ? ['利用眼前不对劲的东西', '和眼前的人交谈或保护他', '离开、躲避或使用手里的东西']
@@ -356,14 +360,14 @@ function build(locale: Locale): StoryCartridge {
         skills: [{ id: 'seams', label: s('找缝', 'Find Seams'), value: 6 }, { id: 'play-dead', label: s('装死', 'Play Dead'), value: 5 }, { id: 'half-truth', label: s('只说一半实话', 'Tell Half a Truth'), value: 4 }],
         detail: s('白色折纸鸟轮廓、黑色像素断面与红色游标尾丝组成的小生物。', 'A small creature made from a white origami-bird outline, broken black pixels, and a red cursor tail.'),
         lore: s('系统给这种没删干净的东西起了一个又长又难听的名字；它只记住最后一个字，自称小残。它知道几条逃生经验，却不懂这里的原理。', 'The system gave things it failed to delete a long ugly name. It kept only the friendliest part: Little Remnant. It knows escape tricks, not the theory behind this place.'),
-        initialStatus: 'known',
+        hiddenUntilIntroduced: true,
       },
       {
         id: 'default-seven', name: s('默认七号', 'Default Seven'), role: s('抹平者的样板人', 'Template person of the Smoother'), vitality: 100, stress: 12,
         skills: [{ id: 'blend', label: s('融入背景', 'Blend In'), value: 7 }, { id: 'replace', label: s('替代', 'Replace'), value: 6 }],
         detail: s('穿中性灰连体服、永远保持礼貌微笑的普通人；有自己的脸，不得继承玩家外形。', 'A generic person in a neutral gray jumpsuit with a permanent polite smile and a distinct non-player face.'),
         lore: s('每当系统无法决定该画谁，默认七号就会被放进去；它已经替代过太多人。', 'Whenever the system cannot decide whom to draw, Default Seven is inserted. It has replaced too many people.'),
-        initialStatus: 'known',
+        hiddenUntilIntroduced: true,
       },
     ],
     initialMap: [
@@ -376,7 +380,7 @@ function build(locale: Locale): StoryCartridge {
       {
         id: 'latent-zero', label: s('画外之地 · 无边处', 'Outside the Pictures · The Boundless'), connectedTo: s('未完成的雨城', 'Unfinished Rain City'),
         detail: s('没有地面、远近和方向的深黑无边处，只漂着无法拼合的颜色、轮廓与一根红线。', 'A boundless matte-black non-space with no floor, depth, or direction, holding only color scraps, partial contours, and one red line.'),
-        lore: s('它不是真的黑色；只是人的眼睛无法读懂这里。小残只知道从这里总能找到下一幅画。', 'It is not truly black; human eyes simply cannot decode it. Little Remnant only knows another picture can always be found here.'),
+        lore: s('它不是真的黑色；只是人的眼睛无法读懂这里。红线深处似乎还有某个会动的小东西。', 'It is not truly black; human eyes simply cannot decode it. Something small appears to be moving beyond the red filament.'),
         facts: [s('无边处会记住带回来的东西', 'The Boundless remembers what returns'), s('零碎画面会通往不同世界', 'Image scraps lead to different worlds')],
       },
       {

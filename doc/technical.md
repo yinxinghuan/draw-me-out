@@ -25,7 +25,7 @@
 - `src/story/engine/endingDirector.ts`、`endingAdapter.ts`：冻结终局快照、计算可用能力、约束 AI 生成兼容尾声。
 - `src/story/adapters/`：本地演示、AIGram 正式叙事，以及兼容旧 `chat_id` 入口的适配器；两种正式入口都只调用稳定的 AlterU game-chat 网关，不依赖模型提供商或测试机地址。AIGram 适配器对本游戏额外注入“普通玩家语言合同”，将内部 ID 与玩家可见词汇隔离。
 - `src/shared/runtime/media.ts`：统一媒体服务 v1 客户端、尺寸拟合、幂等请求、任务轮询与结构化错误。
-- `src/shared/runtime/useGenImage.ts`：图片请求状态、重复请求 ID 管理和显式旧 transit 回退。
+- `src/shared/runtime/useGenImage.ts`：图片请求状态、重复请求 ID 管理、60 秒任务上限和显式旧 transit 回退。
 - `src/shared/runtime/useGenVideo.ts`：统一媒体服务 9:16、5 秒视频任务客户端；本游戏默认不启用。
 - `src/shared/save/useGameSave.ts`：AIGram 与 localStorage 双路径存档。
 - `public/alteru-storage-scope.js`、`src/alteru-storage-scope.d.ts`：按当前部署 UUID 隔离浏览器存储，防止同域游戏和 Remix 互相读取本地状态。
@@ -48,6 +48,8 @@
 
 故事内部仍可使用 `coordinate-*`、`optimizer-*`、`residual` 等稳定协议 ID，保证旧存档和结局条件不失效；这些 ID 不得直接出现在玩家可见文字。可见映射固定为“回家线索、抹平者、小残、我还是我、余力、被发现”。每个场景最多引入一个新概念，三个行动必须对应当前最后一个问题，并写成具体动词加眼前对象。
 
+角色定义可用 `hiddenUntilIntroduced` 声明“剧本固定、玩家尚未认识”。这类角色不会进入初始存档和人物面板；收到可见的 `character_update` / `party_change` 后才创建。旧存档规范化时，也会删除从旧版本错误预载、但从未在正文、队伍或关系记录中真正出现的隐藏角色。AI 导演与本地切片都执行“外形—名字来源—当前关系—互动选项”的首次登场顺序。
+
 ### 屏幕与响应式
 
 默认 Civic 页面以 `100dvh` 组织固定状态区、可向上延伸的 4:5 舞台、内容自适应结果层和横向选项。首次入口单独使用 16:9 建立镜头，避免把竖版剧情图硬裁成宽幅。文字按语义分页，不使用省略号截断。320×568 的短屏保持画面、当前一句、至少一项选择和自由输入可达；桌面端限制舞台宽度并保持竖版构图，而不是拉伸到全屏。
@@ -60,7 +62,7 @@
 
 画外之地遵守非空间视觉合同：底层概念是程序可读、人类不可直接感知的高维表示；画面只表现主角感知失败后的平坦深黑无边处和 1–4 组互不相容的发光痕迹。所有相关提示必须明确无地面、无地平线、无透视、无建筑、无可读距离、无渐变/暗角/投影，并让玩家全身占画面高度 30–36%。受控轮廓光需保留头像中的完整轮廓、形态、覆盖物、服装、颜色、纹样与配件；禁止大特写、过小符号化人物、代码、矩阵、神经网络图和数据流。近白场只允许用于明确的抹平者攻击。
 
-场景图失败时保留上一张图与明确重试按钮，故事仍可继续。物品在写入行囊后独立后台显影，图片失败不会撤销物品状态。
+场景图队列优先生成玩家当前看到的最新场景；较早的未完成图保留在后台，当前图完成后再补齐。页面刷新、WebView 被系统回收或存档恢复时，失去原浏览器请求的 `generating` 图会自动恢复为 `queued`，不会永久停在生成中。单次任务以 60 秒为上限；超时后显示明确重试状态，同时保留相同幂等请求 ID，让用户重试时优先找回原任务，而不是重复生成。最终失败时保留上一张图，故事仍可继续。物品在写入行囊后独立后台显影，图片失败不会撤销物品状态。
 
 ### 危险、音频与结局
 
@@ -81,7 +83,7 @@
 - 修改玩家可见叙事词汇时，同时更新 `src/story/adapters/aigram.ts` 的本游戏语言合同，并运行 `npm run test:plain-language`；测试会拦截术语泄漏、过长中文选项、缺失选择和旧式画外空间构图。
 - 增加图片世界：在 cartridge 的章节/地图/生成规则中定义稳定矛盾，并为切片增加 3–5 个有后果的步骤；图片提示只描述当前事件。
 - 调整头像身份合同或主动作判断：编辑 `src/story/engine/imageIdentity.ts`、`imageDirector.ts` 和 cartridge 的 `playerImageRole/playerImageExclusions`，并重新运行普通头像与无脸非人测试图验证。
-- 调整图片尺寸、频率或启用里程碑视频：修改 cartridge 的 `imageDirector/mediaDirector`；视频启用前必须提供真实 9:16 首尾帧、5 秒动作和声音提示，不能拉伸 4:5 图片。
+- 调整图片尺寸、频率、队列优先级或启用里程碑视频：修改 cartridge 的 `imageDirector/mediaDirector` 与 `useStoryEngine.ts`；队列改动必须运行 `npm run test:image-queue`。视频启用前必须提供真实 9:16 首尾帧、5 秒动作和声音提示，不能拉伸 4:5 图片。
 - 改 UI 排序、阶段或抽屉：编辑 `StoryShell.tsx`；改视觉 token、短屏高度、按钮和分页行为编辑 `story.less`。
 - 改文字、语言检测和系统提示：编辑 `src/story/i18n.ts`；剧情双语文案仍放在 cartridge/campaign。
 - 改音色、BPM、张力权重：先修改 cartridge 的 `audioTheme`，需要新合成手法时再改 `src/story/audio/`。

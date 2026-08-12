@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { drawMeOut, drawMeOutEn } from '../src/story/cartridges/drawMeOut'
+import { createInitialSave, normalizeCharacterState } from '../src/story/engine/reducer'
 
 function choicesFrom(content: string): string[] {
   const match = content.match(/\[choices:\s*"([\s\S]*?)"\]/)
@@ -46,6 +47,25 @@ for (const choice of zhChoices) {
 for (const turn of [...drawMeOut.demoTurns, ...drawMeOutEn.demoTurns]) {
   assert.equal(choicesFrom(turn.content).length, 3, `Demo turn must expose exactly three choices: ${turn.match[0]}`)
 }
+
+const initialSave = createInitialSave(drawMeOut)
+assert.equal(initialSave.characters.some((character) => character.id === 'residual'), false, 'Little Remnant leaked into the roster before its debut')
+assert.equal(initialSave.characters.some((character) => character.id === 'default-seven'), false, 'Default Seven leaked into the roster before its debut')
+const legacyPreDebut = normalizeCharacterState({
+  blocks: initialSave.blocks,
+  relationships: [],
+  characters: drawMeOut.characters.map((character) => ({ ...character, status: 'known' as const, origin: 'cartridge' as const, updatedAtScene: 0 })),
+  partyMemberIds: [],
+}, drawMeOut)
+assert.equal(legacyPreDebut.characters.some((character) => character.id === 'residual'), false, 'Legacy pre-debut roster was not repaired')
+
+const residualIntroIndex = drawMeOut.demoTurns.findIndex((turn) => turn.content.includes('[character_update: character_id="residual"'))
+const firstResidualChoiceIndex = drawMeOut.demoTurns.findIndex((turn) => choicesFrom(turn.content).some((choice) => choice.includes('小残')))
+assert.ok(residualIntroIndex >= 0 && firstResidualChoiceIndex > residualIntroIndex, 'A choice names Little Remnant before its visible debut')
+const residualIntro = visibleProse(drawMeOut.demoTurns[residualIntroIndex].content)
+assert.match(residualIntro, /它不是人/)
+assert.match(residualIntro, /叫我小残吧/)
+assert.match(residualIntro, /向导/)
 
 const allImagePrompts = [
   drawMeOut.opening.imagePrompt,

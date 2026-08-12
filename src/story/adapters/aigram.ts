@@ -36,6 +36,7 @@ The player may attempt any plausible in-world action, even if it was not one of 
 - 内部状态可以保留技术 ID，但所有正文、对话、地点、物品、目标、摘要与按钮只使用日常说法：画外之地、小残、回家线索、抹平者、我还是我、余力、被发现。
 - 玩家可见文字不得出现“潜空间、潜层、采样、权重、优化器、渲染器、提示词、模型参数、坐标碎片、统一程序”等术语。若剧情必须涉及底层机制，先把它写成具体可感知的后果，不讲原理。
 - 每屏最多引入一个新概念，先让事情发生，再用一个日常名字称呼它。
+- 未登场角色禁止直接出现在对话、目标和选项里。首次登场必须先在可见正文中写清“玩家看见什么、名字从何而来、此刻是什么关系”，然后才能用名字提供互动选项；加入同行也必须在正文里明确发生。
 - 每个选项必须对应当前最后一句提出的问题，写成“明确动词 + 眼前对象或目的”，优先不超过 18 个汉字。禁止抽象判断、设定说明和自造术语。
 - 画外之地不是房间、平原、走廊或空白画布。它是人类无法读取的信息，被主角感受成无边的暗黑；叙述不得赋予它地面、地平线、固定方向、远近或建筑。
 - 画外之地出图时，主角必须保留参考头像的完整可见身份——包括轮廓、形态、遮挡物、服装、颜色、花纹与配件，而不只是脸。使用中远景全身构图，主角约占画面高度 30–36%，既能辨认身份又保留大面积空旷暗域；禁止大特写，也禁止缩成看不清特征的小点。
@@ -46,6 +47,7 @@ DRAW ME OUT ordinary-player language contract:
 - Internal state may keep technical ids, but all visible prose, dialogue, locations, items, objectives, summaries, and buttons use everyday names: Outside the Pictures, Little Remnant, Home Clues, the Smoother, Still Me, Strength, and Detected.
 - Never expose terms such as latent space, latent layer, sampling, weights, optimizer, renderer, prompt, model parameters, coordinate fragments, or unifier. Turn any underlying mechanism into a concrete visible consequence instead of explaining the theory.
 - Introduce at most one new idea per screen. Let it happen first, then give it one ordinary name.
+- An unmet character cannot appear directly in dialogue, objectives, or choices. First show what the player sees, explain the everyday source of the name, and state the present relationship in visible prose. Only then may choices use that name, and joining the party must visibly happen.
 - Every choice must answer the final question posed by the current beat, using a clear verb plus a visible object or immediate purpose. Keep it near 42 characters. Never put abstract judgment, lore exposition, or invented jargon in a button.
 - Outside the Pictures is not a room, plain, corridor, or empty canvas. It is unreadable information perceived as boundless darkness; never give it a floor, horizon, fixed direction, readable distance, or architecture in visible prose.
 - In Outside-the-Pictures images, preserve the reference avatar's complete visible identity—not only a face, but silhouette, form, covering, clothing, colors, patterns, and accessories. Use a full-body medium-long shot at roughly 30–36% of frame height: recognizable, never a close-up, and never reduced to an unreadable speck, while the dark emptiness still dominates.

@@ -19,7 +19,7 @@ export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: stri
     })],
     choices: cartridge.opening.choices, map: cartridge.initialMap.map((node) => ({ ...node, visited: node.visited ?? Boolean(node.current), facts: node.facts ? [...node.facts] : undefined })),
     inventory: cartridge.initialInventory.map((item) => ({ ...item, metrics: item.metrics?.map((metric) => ({ ...metric })), imageStatus: item.imageUrl ? 'ready' : 'idle' })),
-    characters: cartridge.characters.map((character) => {
+    characters: cartridge.characters.filter((character) => !character.hiddenUntilIntroduced).map((character) => {
       const state = characterFromDefinition(character)
       if (initialPartyMemberIds.includes(state.id)) state.status = 'companion'
       return state
@@ -63,16 +63,18 @@ function resolveCharacter(save: StorySave, command: CharacterCommand, index: num
     existing.updatedAtScene = save.scene
     return existing
   }
+  const definition = command.characterId ? cartridge.characters.find((character) => character.id === command.characterId) : undefined
   const created: StoryCharacter = {
+    ...definition,
     id: command.characterId ?? `npc-${save.scene}-${index}`,
-    name: command.character,
-    role: command.role ?? t(cartridge.locale, command.type === 'party_change' && command.change === 'add' ? 'companion' : 'knownPerson'),
-    vitality: clamp(command.vitality ?? 100, 0, 100),
-    stress: clamp(command.stress ?? 0, 0, 100),
-    skills: command.skills?.map((skill) => ({ ...skill })) ?? [],
-    detail: command.detail,
-    lore: command.lore,
-    status: 'known', origin: 'generated', lastKnownLocation: save.location, updatedAtScene: save.scene,
+    name: command.character || definition?.name || command.characterId || `NPC ${index + 1}`,
+    role: command.role ?? definition?.role ?? t(cartridge.locale, command.type === 'party_change' && command.change === 'add' ? 'companion' : 'knownPerson'),
+    vitality: clamp(command.vitality ?? definition?.vitality ?? 100, 0, 100),
+    stress: clamp(command.stress ?? definition?.stress ?? 0, 0, 100),
+    skills: command.skills?.map((skill) => ({ ...skill })) ?? definition?.skills.map((skill) => ({ ...skill })) ?? [],
+    detail: command.detail ?? definition?.detail,
+    lore: command.lore ?? definition?.lore,
+    status: 'known', origin: definition ? 'cartridge' : 'generated', lastKnownLocation: save.location, updatedAtScene: save.scene,
   }
   save.characters.push(created)
   return created
@@ -89,7 +91,15 @@ type LegacyCharacterState = Pick<StorySave, 'blocks' | 'relationships'> & Partia
 export function normalizeCharacterState(candidate: LegacyCharacterState, cartridge: StoryCartridge): Pick<StorySave, 'characters' | 'partyMemberIds' | 'relationships'> {
   const staticById = new Map(cartridge.characters.map((character) => [character.id, character]))
   const inputCharacters = Array.isArray(candidate.characters) ? candidate.characters : []
-  const characters: StoryCharacter[] = inputCharacters.map((character) => {
+  const hasVisibleIntroduction = (character: StoryCharacter): boolean => candidate.blocks.some((block) => block.kind !== 'image' && `${block.speaker ?? ''} ${block.text}`.includes(character.name))
+  const characters: StoryCharacter[] = inputCharacters.filter((character) => {
+    const definition = staticById.get(character.id)
+    if (!definition?.hiddenUntilIntroduced) return true
+    if (character.status === 'companion' || character.status === 'departed') return true
+    if ((character.updatedAtScene ?? 0) > 0) return true
+    if (candidate.relationships.some((event) => event.characterId === character.id || event.actor === character.name)) return true
+    return hasVisibleIntroduction(character)
+  }).map((character) => {
     const definition = staticById.get(character.id)
     return {
       ...definition, ...character,
@@ -104,7 +114,7 @@ export function normalizeCharacterState(candidate: LegacyCharacterState, cartrid
     }
   })
   cartridge.characters.forEach((definition) => {
-    if (!characters.some((character) => character.id === definition.id)) characters.push(characterFromDefinition(definition))
+    if (!definition.hiddenUntilIntroduced && !characters.some((character) => character.id === definition.id)) characters.push(characterFromDefinition(definition))
   })
   const findOrCreate = (name: string, id?: string): StoryCharacter => {
     const found = (id ? characters.find((character) => character.id === id) : undefined)

@@ -151,25 +151,21 @@ Only one thing makes sense: there is too much information here, and your eyes ca
     ...variants(locale, [
       {
         zhMatch: ['红线往前', '颜色碎片', '再喊一次'], enMatch: ['red line', 'scrap of color', 'Call out once'],
-        zh: `红线忽然打了个结。结里漏出一只小东西：像没折完的白纸鸟，边缘缺了几块，尾巴是一截红线。
-“坏消息，”它说，“你可能是个人。”
-它停顿一下，像是在确认自己有没有被删掉。
-“好消息：系统暂时没发现。”
+        zh: `红线忽然打了个结。结里漏出一只小东西。它不是人，更像一只没折完的白纸鸟：边缘缺了几块，尾巴还是那截红线。
+它绕着你飞了一圈：“那个声音说我是没删干净的东西。名字太长，叫我小残吧。坏消息：你可能是个人；好消息：它暂时没发现。”
 [character_update: character_id="residual" character="小残" role="画外向导" detail="像没折完的白纸鸟，边缘缺块，尾巴是一截红线" lore="系统给没删干净的东西起了一个又长又难听的名字；它只记住最后一个字，自称小残。知道几条逃生经验，却不懂这里的原理" vitality="88" stress="31" skills="找门: 6|装死: 5|只说一半实话: 4"]
 [party_change: character_id="residual" character="小残" change="add" role="画外向导" detail="像没折完的白纸鸟，边缘缺块，尾巴是一截红线" lore="没被删干净的小东西，能感觉到一幅画什么时候快要散掉"]
 [fact: id="residual-met" value="true"]
-“我不知道这里真正长什么样。”小残说，“这片黑，大概只是你的眼睛放弃了。”
+小残叼住红线，示意你跟上。就这样，你有了一个同样迷路的向导。“我不知道这里真正长什么样。这片黑，大概只是你的眼睛放弃了。”
 三组碎片短暂拼出画面：快飞上天的送货员、说不完继承人名字的国王、以及一群开了七年会的人。
 [state: value="选一个眼前的麻烦，帮完以后寻找回家线索"]
 [choices: "去救快飞走的送货员"|"去帮国王说完一句话"|"去结束那场七年会议"]`,
-        en: `The red filament ties itself into a knot. Something crawls out: the outline of a white origami bird, shedding black pixels from its wings, with a red cursor for a tail.
-“Bad news,” it says. “You may be a person.”
-It pauses as if waiting for a progress bar you cannot see.
-“Good news: the system has not noticed yet.”
+        en: `The red filament ties itself into a knot. Something small crawls out. It is not a person, but an unfinished white paper bird with missing edges and the filament still attached as its tail.
+It circles you once. “That voice called me something it failed to erase. The name was too long, so call me Little Remnant. Bad news: you may be a person. Good news: it has not noticed yet.”
 [character_update: character_id="residual" character="Little Remnant" role="Guide outside pictures" detail="A small creature made from a white origami-bird outline, broken black pixels, and a red cursor tail" lore="The system has an ugly technical name for things it failed to delete; it chose Little Remnant instead. It knows escape tricks, not the theory behind this place" vitality="88" stress="31" skills="Find Seams: 6|Play Dead: 5|Tell Half a Truth: 4"]
 [party_change: character_id="residual" character="Little Remnant" change="add" role="Guide outside pictures" detail="A small creature made from a white origami-bird outline, broken black pixels, and a red cursor tail" lore="A small life the system failed to erase, able to sense when a picture is about to collapse"]
 [fact: id="residual-met" value="true"]
-“I do not know what this truly looks like,” Little Remnant says. “The darkness may just be your eyes giving up.”
+Little Remnant takes the filament and motions for you to follow. Just like that, you have a guide who is equally lost. “I do not know what this truly looks like. The darkness may just be your eyes giving up.”
 Three loose feature clusters briefly suggest a courier flying away, a king unable to finish naming an heir, and workers trapped in a seven-year meeting.
 [state: value="Choose one visible problem, help someone, and look for a Home Clue"]
 [choices: "Save the courier drifting away"|"Help the king finish one sentence"|"End the seven-year meeting"]`,

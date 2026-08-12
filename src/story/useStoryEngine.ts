@@ -24,6 +24,11 @@ const DEFAULT_MEDIA_DIRECTOR: StoryMediaDirector = {
   minVideoGapTurns: 6,
 }
 
+// Runtime images currently complete in roughly 4–20 seconds in production.
+// A bounded ceiling keeps a lost provider task from leaving the story UI on
+// "generating" indefinitely, while still allowing a genuinely slow edit.
+const SCENE_IMAGE_TIMEOUT_MS = 60_000
+
 type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'partyMemberIds' | 'danger' | 'facts' | 'finale'> & {
   version?: 1 | 2 | 3 | 4 | 5 | 6 | 7
   locale?: Locale
@@ -95,7 +100,10 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   if (!candidate || candidate.cartridgeId !== cartridge.id || !Array.isArray(candidate.blocks)) return createInitialSave(cartridge, incomingChatId)
   if (incomingChatId && candidate.remoteChatId && candidate.remoteChatId !== incomingChatId) return createInitialSave(cartridge, incomingChatId)
   const repaired = recoverPersistedChoices(repairMockLoop(candidate, cartridge), cartridge)
-  let blocks = repaired.blocks
+  // `generating` only means that this browser tab owned an in-memory request.
+  // That promise cannot survive a reload, background WebView eviction or a
+  // resumed cloud save, so every orphaned state must re-enter the queue.
+  let blocks = recoverInterruptedImageStates(repaired.blocks)
   if (!blocks.some((block) => block.kind === 'image')) {
     const legacyPrompt = repaired.imagePrompt?.trim() ?? ''
     const canRestoreImage = repaired.scene === 0 || Boolean(legacyPrompt || repaired.imageUrl)
@@ -148,6 +156,16 @@ function inventoryImagePrompt(item: InventoryItem, cartridge: StoryCartridge): s
   const direction = cartridge.itemImageDirection ?? 'elegant in-world artifact study with tactile natural materials and restrained directional light'
   const content = item.imagePrompt ?? `A single inventory object from ${cartridge.copy.title}: ${item.label}. ${item.detail ?? ''} ${item.effect ?? ''} ${item.lore ?? ''}`
   return `Create an inventory artifact plate for ${cartridge.copy.title}. Content brief: ${content}. Art direction: ${direction}. Follow only this text-defined medium, line treatment, palette, surface texture, lighting contrast, and degree of realism. Do not borrow any location, landmark, character, composition, or prop from the game's cover or opening scene. One object or one tightly grouped item set only, centered still life, square composition, no people, no hands, no text, no letters, no labels, no logo, no UI.`
+}
+
+export function recoverInterruptedImageStates(blocks: StorySave['blocks']): StorySave['blocks'] {
+  return blocks.map((block) => block.kind === 'image' && block.data?.status === 'generating'
+    ? { ...block, data: { ...block.data, status: 'queued' } }
+    : block)
+}
+
+export function newestQueuedSceneImage(blocks: StorySave['blocks']) {
+  return [...blocks].reverse().find((block) => block.kind === 'image' && block.data?.status === 'queued')
 }
 
 export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode, incomingChatId?: string, imageIdentity: { ready: boolean; refUrl?: string } = { ready: true }) {
@@ -210,7 +228,10 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
     })
   }, [cartridge.id, persist])
 
-  const pendingSceneImage = save.blocks.find((block) => block.kind === 'image' && block.data?.status === 'queued')
+  // Prefer the scene the player is looking at. If they move quickly while an
+  // older image is still drawing, the newest beat is generated next instead
+  // of making the visible loader wait behind the entire history.
+  const pendingSceneImage = newestQueuedSceneImage(save.blocks)
   const queuedSceneImage = imageIdentity.ready ? pendingSceneImage : undefined
   const queuedItemImage = save.inventory.find((item) => item.imageStatus === 'queued')
   const queuedImageKey = queuedSceneImage ? `scene:${queuedSceneImage.id}` : queuedItemImage ? `item:${queuedItemImage.id}` : ''
@@ -252,7 +273,7 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
       : updateInventoryItemImage(current, entityId, { status: 'generating' }))
     ;(async () => {
       try {
-        for (let attempt = 0; attempt < 3; attempt += 1) {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
           try {
             const gap = Math.max(0, 3000 - (Date.now() - lastImageCallAt.current))
             if (gap) await new Promise((resolve) => window.setTimeout(resolve, gap))
@@ -265,8 +286,8 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
               : prompt
             lastImageCallAt.current = Date.now()
             const url = await generate(usePlayerReference
-              ? { prompt: identityPrompt, ref_url: imageIdentity.refUrl, requestedSize: mediaDirector.imageTarget, profile: mediaDirector.imageProfile }
-              : { prompt: identityPrompt, requestedSize: mediaDirector.imageTarget, profile: mediaDirector.imageProfile })
+              ? { prompt: identityPrompt, ref_url: imageIdentity.refUrl, requestedSize: mediaDirector.imageTarget, profile: mediaDirector.imageProfile, timeoutMs: SCENE_IMAGE_TIMEOUT_MS }
+              : { prompt: identityPrompt, requestedSize: mediaDirector.imageTarget, profile: mediaDirector.imageProfile, timeoutMs: SCENE_IMAGE_TIMEOUT_MS })
             if (imageAttempt.current === queuedImageKey) commit((current) => isScene
               ? updateImageBlock(current, entityId, { status: 'ready', url, identityRefVersion: usePlayerReference ? PLAYER_IMAGE_REFERENCE_VERSION : 0 })
               : updateInventoryItemImage(current, entityId, { status: 'ready', url, styleVersion: ITEM_IMAGE_STYLE_VERSION }))
@@ -285,7 +306,14 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
               retryable,
               retryAfterMs,
             })
-            if (!retryable || attempt >= 2) break
+            // An ambiguous timeout keeps the same request ID in useGenImage.
+            // Stop here and expose Retry; an explicit retry can recover the
+            // original task without making the player watch another minute.
+            const code = typeof cause === 'object' && cause !== null && 'code' in cause
+              ? String((cause as { code?: string }).code ?? '')
+              : ''
+            if (code === 'TIMEOUT') break
+            if (!retryable || attempt >= 1) break
             await new Promise((resolve) => window.setTimeout(
               resolve,
               Math.max(attempt === 0 ? 3000 : 8000, retryAfterMs),
