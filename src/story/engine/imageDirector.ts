@@ -1,10 +1,36 @@
-import { SCENE_IMAGE_PROMPT_VERSION, type ParsedScene, type SceneImageSubject, type SceneImageTrigger, type StoryCartridge, type StorySave } from '../types'
+import { SCENE_IMAGE_PROMPT_VERSION, type ParsedScene, type SceneImageSubject, type SceneImageTrigger, type StoryCartridge, type StorySave, type StoryVisualBeat } from '../types'
 
 export interface SceneImageDecision {
   prompt?: string
   source?: 'ai' | 'director'
   reason?: 'ai-proposal' | SceneImageTrigger | 'cadence'
   playerVisible?: boolean
+  snapshot?: StoryVisualBeat
+}
+
+function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisualBeat): string {
+  const target = cartridge.mediaDirector?.imageTarget ?? { width: 640, height: 360 }
+  const frame = target.height > target.width
+    ? 'Create one fresh 4:5 portrait cinematic illustration. Keep the dominant action and identity-defining body cues inside the central 58% safe column while extending the environment to every edge.'
+    : 'Create one fresh 16:9 cinematic illustration with the dominant action in the center-safe region.'
+  const result = CJK_RE.test(beat.result) ? '' : withoutRendererTextRisk(beat.result).slice(0, 420)
+  const direction = cartridge.sceneImageDirection ?? `${cartridge.theme.material} story-world editorial illustration`
+  return [
+    frame,
+    'AUTHORITATIVE SCENE SNAPSHOT. Every visual fact below is final; do not infer a different location, action, cast, prop or outcome from older context.',
+    `Stable location: ${beat.locationId.replace(/-/g, ' ')}. Episode phase: ${beat.phase}. Shot purpose: ${beat.shot}.`,
+    `Single visible action: ${beat.action}.`,
+    result ? `Visible resolved result: ${result}.` : '',
+    `Visible focal subjects only: ${beat.subjects.join(' and ')}.`,
+    beat.props.length ? `Required visible props or traces: ${beat.props.join('; ')}.` : '',
+    `Environment: ${beat.environment}. Lighting and palette continuity: ${beat.lighting}.`,
+    beat.continuity.length ? `Continuity locks: ${beat.continuity.join('; ')}.` : '',
+    beat.avoid.length ? `Forbidden in this frame: ${beat.avoid.join('; ')}.` : '',
+    `Mandatory art direction: ${direction}.`,
+    beat.playerVisible ? `SUBJECT A is the player protagonist and owns the single dominant action. Preserve the supplied reference's exact complete visible identity, including silhouette, form or species, proportions, material, covering, face visibility, costume, colors, patterns and accessories. Never transfer those traits to another subject.` : 'Do not apply the player identity reference to any person, creature, reflection, mannequin or prop in this frame.',
+    'Show one instant only, with at most two focal subjects. No montage, split screen, before-and-after composition, flashback, speculative future, duplicated identity or unrelated background event.',
+    'ABSOLUTELY NO VISIBLE WRITING OR LANGUAGE OF ANY KIND. All labels, signs, books, slides, cards and papers remain blank or use non-linguistic marks. No letters, words, numbers, pseudo-text, logo, border or UI.',
+  ].filter(Boolean).join(' ')
 }
 
 function lastScheduledScene(save: StorySave): number {
@@ -223,9 +249,22 @@ export function chooseSceneImage(
   aiPrompt?: string,
   imageSubject?: SceneImageSubject,
   action = '',
+  visualBeat?: StoryVisualBeat,
 ): SceneImageDecision {
+  if (visualBeat?.refresh) {
+    return {
+      prompt: buildSnapshotPrompt(cartridge, visualBeat),
+      source: 'director',
+      reason: visualBeat.shot === 'arrival' ? 'new-location'
+        : visualBeat.shot === 'clue' ? 'rare-item'
+          : visualBeat.shot === 'return' ? 'chapter-checkpoint'
+            : visualBeat.shot === 'danger' ? 'skill-outcome' : 'objective-change',
+      playerVisible: visualBeat.playerVisible,
+      snapshot: visualBeat,
+    }
+  }
   const proposal = aiPrompt?.trim()
-  if (proposal) {
+  if (proposal && cartridge.id !== 'draw-me-out') {
     const visible = playerIsVisible(cartridge, parsed, proposal, imageSubject, action)
     return {
       prompt: buildScenePrompt(cartridge, next, parsed, 'cadence', proposal, visible),
@@ -246,8 +285,8 @@ export function chooseSceneImage(
   if (soft && turnsSinceImage >= director!.softCooldownTurns) {
     return { prompt: buildScenePrompt(cartridge, next, parsed, soft, undefined, visible), source: 'director', reason: soft, playerVisible: visible }
   }
-  if (!director || turnsSinceImage >= 1) {
+  if (!director || turnsSinceImage >= director.maxQuietTurns) {
     return { prompt: buildScenePrompt(cartridge, next, parsed, 'cadence', undefined, visible), source: 'director', reason: 'cadence', playerVisible: visible }
   }
-  return { prompt: buildScenePrompt(cartridge, next, parsed, 'cadence', undefined, visible), source: 'director', reason: 'cadence', playerVisible: visible }
+  return {}
 }

@@ -112,7 +112,7 @@ assert.equal(save.facts['undo-cost-rain-spent'], true)
 assert.equal(save.inventory.find((item) => item.id === 'undo-key')?.metrics?.find((metric) => metric.id === 'remaining-uses')?.value, '2')
 assert.equal(save.stats.trace, 19)
 assert.equal(save.danger.phase, 'calm')
-assert.equal(save.sessionEnded, true)
+assert.equal(save.sessionEnded, false)
 
 save.danger = { ...save.danger, phase: 'warning', severity: 2 }
 result = governed('用撤销键，忘掉悬停的雨')

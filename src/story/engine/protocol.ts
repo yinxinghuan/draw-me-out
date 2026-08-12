@@ -32,9 +32,33 @@ function number(value: string | undefined, fallback = 0): number {
 
 function parseChoices(source: string): string[] {
   const body = source.replace(/^\s*choices\s*:/i, '').replace(/\]\s*$/, '').trim()
-  const quoted = [...body.matchAll(/["'“”‘’]([^"'“”‘’]+)["'“”‘’]/g)].map((match) => match[1].trim()).filter(Boolean)
-  if (quoted.length) return quoted
-  return body.replace(/^\[/, '').replace(/\]$/, '').split(/[|｜]/).map((choice) => choice.replace(/^["'“”‘’]|["'“”‘’]$/g, '').trim()).filter(Boolean)
+  const input = body.replace(/^\[/, '').replace(/\]$/, '')
+  const parts: string[] = []
+  let start = 0
+  let quote = ''
+  const closes: Record<string, string> = { '"': '"', "'": "'", '“': '”', '‘': '’' }
+  for (let index = 0; index < input.length; index += 1) {
+    const character = input[index]
+    if (quote) {
+      if (character === closes[quote] && input[index - 1] !== '\\') quote = ''
+      continue
+    }
+    if (closes[character]) {
+      quote = character
+      continue
+    }
+    if (character === '|' || character === '｜') {
+      parts.push(input.slice(start, index))
+      start = index + 1
+    }
+  }
+  parts.push(input.slice(start))
+  return parts.map((raw) => {
+    const value = raw.trim()
+    const opening = value[0]
+    const closing = closes[opening]
+    return closing && value.endsWith(closing) ? value.slice(1, -1).trim() : value
+  }).filter(Boolean)
 }
 
 function extractNaturalChoices(source: string): { prose: string; choices: string[] } {

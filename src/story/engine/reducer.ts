@@ -4,6 +4,7 @@ import { chooseSceneImage } from './imageDirector'
 import { createInitialDangerState, normalizeDangerState, settleDangerTurn } from './dangerDirector'
 import { canStartTrueEnding } from './endingDirector'
 import { applyDomainResolution, domainAllowsModelCommand, resolveDomainAction, syncDomainDerivedState } from './domainRules'
+import { createInitialCampaignState, syncCampaignState } from './campaignDirector'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -12,7 +13,7 @@ function clamp(value: number, min: number, max: number): number {
 export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: string): StorySave {
   const initialPartyMemberIds = cartridge.initialPartyMemberIds ?? cartridge.characters.filter((character) => character.initialStatus === 'companion').map((character) => character.id)
   const initial: StorySave = {
-    version: 7, cartridgeId: cartridge.id, locale: cartridge.locale, remoteChatId, entered: false, scene: 0,
+    version: 8, cartridgeId: cartridge.id, locale: cartridge.locale, remoteChatId, entered: false, scene: 0,
     location: cartridge.opening.location, time: cartridge.opening.time, objective: cartridge.opening.objective,
     stats: Object.fromEntries(cartridge.statDefinitions.map((stat) => [stat.id, stat.initial])),
     blocks: [...cartridge.opening.blocks, createImageBlock('image-0', cartridge.opening.location, cartridge.opening.imagePrompt, 'idle', '', {
@@ -31,8 +32,9 @@ export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: stri
     danger: createInitialDangerState(),
     sessionEnded: false,
     finale: { status: 'idle' },
+    campaign: createInitialCampaignState(),
   }
-  return syncDomainDerivedState(initial, cartridge)
+  return syncCampaignState(syncDomainDerivedState(initial, cartridge))
 }
 
 export function enterStory(save: StorySave, cartridge: StoryCartridge): StorySave {
@@ -519,7 +521,7 @@ export function applyParsedScene(
   // the dedicated resume action supplied by the Composer.
   if (!next.sessionEnded && next.choices.length < 2) next.choices = createRecoveryChoices(next, cartridge)
 
-  const image = chooseSceneImage(save, next, adjudicatedParsed, cartridge, imagePrompt, imageSubject, actionId)
+  const image = chooseSceneImage(save, next, adjudicatedParsed, cartridge, imagePrompt, imageSubject, actionId, domainResolution?.visualBeat)
   const milestone = milestoneReason(adjudicatedParsed, dangerDirective)
   next.blocks = [
     ...next.blocks,
@@ -527,8 +529,9 @@ export function applyParsedScene(
     ...(image.prompt ? [createImageBlock(`image-${next.scene}`, next.location, image.prompt, 'queued', '', {
       source: image.source ?? 'director', reason: image.reason ?? 'cadence', promptVersion: String(SCENE_IMAGE_PROMPT_VERSION),
       playerVisible: image.playerVisible ? 'true' : 'false',
+      ...(image.snapshot ? { visualSnapshot: JSON.stringify(image.snapshot), visualPhase: image.snapshot.phase } : {}),
       ...(milestone ? { milestone, videoStatus: 'queued' } : {}),
     })] : []),
   ]
-  return syncDomainDerivedState(next, cartridge)
+  return syncCampaignState(syncDomainDerivedState(next, cartridge))
 }

@@ -25,6 +25,23 @@ function currentMapNodeId(save: StorySave): string | undefined {
   return save.map.find((node) => node.current)?.id
 }
 
+function undoCostChoices(save: StorySave, locale: StoryCartridge['locale']): [string, string, string] {
+  const choices: string[] = []
+  if (save.facts['rain-is-pixels'] === true && save.facts['undo-cost-rain-spent'] !== true) {
+    choices.push(locale === 'zh' ? '用撤销键，忘掉悬停的雨' : 'Use Undo and forget the suspended rain')
+  }
+  if (save.facts['rain-city-method'] !== 'unset' && save.facts['rain-city-method'] !== 'forgotten' && save.facts['undo-cost-door-spent'] !== true) {
+    choices.push(locale === 'zh' ? '用撤销键，忘掉怎样找到门' : 'Use Undo and forget how the door was found')
+  }
+  if (save.facts['residual-introduction-memory'] === true && save.facts['undo-cost-remnant-spent'] !== true) {
+    choices.push(locale === 'zh' ? '用撤销键，忘掉小残的自我介绍' : 'Use Undo and forget Little Remnant’s introduction')
+  }
+  const fallback = locale === 'zh'
+    ? ['不用撤销，直接承担后果', '让小残帮忙寻找别的办法', '先观察眼前后果']
+    : ['Accept the consequence without Undo', 'Ask Little Remnant for another way', 'Observe the pending consequence first']
+  return [...choices, ...fallback].slice(0, 3) as [string, string, string]
+}
+
 function requirementMet(requirement: DomainRequirement, save: StorySave): boolean {
   if (requirement.type === 'map') return currentMapNodeId(save) === requirement.nodeId
   if (requirement.type === 'item') return (save.inventory.find((item) => item.id === requirement.id)?.count ?? 0) >= requirement.minCount
@@ -53,6 +70,9 @@ export function resolveDomainAction(save: StorySave, cartridge: StoryCartridge, 
     .sort((left, right) => right.score - left.score || left.index - right.index)[0]
   if (!candidate) return undefined
   const reasons = candidate.rule.requirements.filter((requirement) => !requirementMet(requirement, save)).map((requirement) => requirement.reason)
+  const choices = candidate.rule.id === 'undo-without-cost' && reasons.length
+    ? undoCostChoices(save, cartridge.locale)
+    : [...(reasons.length && candidate.rule.rejectionChoices ? candidate.rule.rejectionChoices : candidate.rule.successChoices)] as [string, string, string]
   return {
     status: reasons.length ? 'rejected' : 'accepted',
     ruleId: candidate.rule.id,
@@ -60,7 +80,7 @@ export function resolveDomainAction(save: StorySave, cartridge: StoryCartridge, 
     effects: reasons.length ? [] : candidate.rule.effects.map((effect) => ({ ...effect })),
     reasons,
     successText: candidate.rule.successText,
-    successChoices: [...(reasons.length && candidate.rule.rejectionChoices ? candidate.rule.rejectionChoices : candidate.rule.successChoices)],
+    successChoices: choices,
   }
 }
 
@@ -202,6 +222,20 @@ export function applyDomainResolution(save: StorySave, cartridge: StoryCartridge
     if (effect.type === 'session') {
       save.sessionEnded = effect.ended
       if (effect.reason) blocks.push({ id, kind: 'summary', text: effect.reason, data: { domainRule: resolution.ruleId } })
+    }
+    if (effect.type === 'campaign') {
+      save.campaign = {
+        ...save.campaign,
+        ...effect.patch,
+        completedEpisodes: effect.patch.completedEpisodes
+          ? [...effect.patch.completedEpisodes]
+          : [...save.campaign.completedEpisodes],
+      }
+    }
+    if (effect.type === 'finale') {
+      save.finale = { status: 'ready', reason: effect.reason }
+      save.sessionEnded = true
+      save.choices = []
     }
   })
   syncDomainDerivedState(save, cartridge)

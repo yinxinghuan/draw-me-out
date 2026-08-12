@@ -45,7 +45,7 @@ export interface Choice { id: string; label: string }
 export type ImageBlockStatus = 'idle' | 'queued' | 'generating' | 'ready' | 'failed'
 export type VideoBlockStatus = 'idle' | 'queued' | 'generating' | 'ready' | 'failed'
 export const ITEM_IMAGE_STYLE_VERSION = 2
-export const SCENE_IMAGE_PROMPT_VERSION = 8
+export const SCENE_IMAGE_PROMPT_VERSION = 9
 export const PLAYER_IMAGE_REFERENCE_VERSION = 2
 export type SceneImageSubject = 'player' | 'environment' | 'others'
 export interface StoryBlock { id: string; kind: 'narration' | 'dialogue' | 'check' | 'change' | 'event' | 'summary' | 'image'; text: string; speaker?: string; tone?: string; data?: Record<string, string | number> }
@@ -66,6 +66,36 @@ export interface InventoryItem {
   imageStyleVersion?: number
 }
 export interface RelationshipEvent { id: string; actor: string; characterId?: string; axis: string; delta: number; source: string }
+
+export type CampaignEpisodeId = 'flying-city' | 'words-kingdom' | 'endless-meeting' | 'label-museum'
+export type CampaignPhase = 'locked' | 'hub' | 'entry' | 'problem' | 'resolution' | 'return' | 'finale'
+
+export interface StoryCampaignState {
+  act: 'prologue' | 'worlds' | 'finale'
+  phase: CampaignPhase
+  currentEpisode?: CampaignEpisodeId
+  completedEpisodes: CampaignEpisodeId[]
+  episodeTurn: number
+  checkpoint: string
+}
+
+export interface StoryVisualBeat {
+  locationId: string
+  location: string
+  episodeId?: CampaignEpisodeId
+  phase: string
+  shot: 'arrival' | 'problem' | 'consequence' | 'clue' | 'danger' | 'return' | 'continuity'
+  action: string
+  result: string
+  subjects: string[]
+  props: string[]
+  environment: string
+  lighting: string
+  continuity: string[]
+  avoid: string[]
+  playerVisible: boolean
+  refresh: boolean
+}
 
 export interface StoryDirector {
   mode: 'guided' | 'open-world'
@@ -232,6 +262,8 @@ export type DomainEffect =
   | { type: 'objective'; value: string }
   | { type: 'clock'; value: string }
   | { type: 'session'; ended: boolean; reason?: string }
+  | { type: 'campaign'; patch: Partial<Omit<StoryCampaignState, 'completedEpisodes'>> & { completedEpisodes?: CampaignEpisodeId[] } }
+  | { type: 'finale'; reason: string }
 
 export interface DomainActionRule {
   id: string
@@ -271,6 +303,7 @@ export interface DomainActionResolution {
   reasons: string[]
   successText: string
   successChoices: [string, string, string]
+  visualBeat?: StoryVisualBeat
 }
 
 export interface DangerCheck {
@@ -353,7 +386,7 @@ export interface StoryCartridge {
 export interface DemoTurn { match: string[]; content: string; imagePrompt?: string; imageSubject?: SceneImageSubject }
 
 export interface StorySave {
-  version: 7
+  version: 8
   cartridgeId: CartridgeId
   locale: Locale
   remoteChatId?: string
@@ -374,6 +407,7 @@ export interface StorySave {
   danger: StoryDangerState
   sessionEnded: boolean
   finale: StoryFinaleState
+  campaign: StoryCampaignState
   lastActionId?: string
   _lastActive?: number
 }

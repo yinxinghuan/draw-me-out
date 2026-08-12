@@ -11,8 +11,9 @@ import { isProtocolResidueText, parseStoryProtocol } from './engine/protocol'
 import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
-import { domainOwnsDanger, resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
+import { resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
 import { buildEndingSnapshot, normalizeFacts } from './engine/endingDirector'
+import { normalizeCampaignState, resolveCampaignAction } from './engine/campaignDirector'
 import { generateStoryEnding } from './engine/endingAdapter'
 import { t } from './i18n'
 import { ITEM_IMAGE_STYLE_VERSION, PLAYER_IMAGE_REFERENCE_VERSION, type AdapterProgress, type InventoryItem, type Locale, type StoryArchive, type StoryCartridge, type StoryMediaDirector, type StoryMode, type StorySave } from './types'
@@ -31,13 +32,14 @@ const DEFAULT_MEDIA_DIRECTOR: StoryMediaDirector = {
 const SCENE_IMAGE_TIMEOUT_MS = 60_000
 
 type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'partyMemberIds' | 'danger' | 'facts' | 'finale'> & {
-  version?: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   locale?: Locale
   characters?: StorySave['characters']
   partyMemberIds?: StorySave['partyMemberIds']
   danger?: Partial<StorySave['danger']>
   facts?: StorySave['facts']
   finale?: StorySave['finale']
+  campaign?: Partial<StorySave['campaign']>
   imageUrl?: string
   imageStatus?: 'idle' | 'queued' | 'generating' | 'ready' | 'failed'
   imagePrompt?: string
@@ -139,7 +141,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   })
   const characterState = normalizeCharacterState(repaired, cartridge)
   const normalized = {
-    ...repaired, ...characterState, version: 7, locale: repaired.locale ?? cartridge.locale,
+    ...repaired, ...characterState, version: 8, locale: repaired.locale ?? cartridge.locale,
     remoteChatId: incomingChatId || repaired.remoteChatId, blocks, inventory, map,
     facts: normalizeFacts(repaired.facts, cartridge.initialFacts),
     finale: repaired.finale?.ending
@@ -148,6 +150,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
         ? { ...repaired.finale, status: 'ready' as const, error: undefined }
         : { status: 'idle' as const },
     danger: normalizeDangerState(repaired.danger),
+    campaign: normalizeCampaignState({ inventory, facts: normalizeFacts(repaired.facts, cartridge.initialFacts), map }, repaired.campaign),
   } as StorySave
   if (!normalized.sessionEnded && normalized.choices.length < 2) normalized.choices = createRecoveryChoices(normalized, cartridge)
   const undoKey = normalized.inventory.find((item) => item.id === 'undo-key')
@@ -382,8 +385,9 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
     try {
       const adapter = mode === 'remote' ? remoteAdapter : mode === 'aigram' ? aigramAdapter : mockAdapter
       const base = localizeKnownState(saveRef.current, cartridge, activeCartridge)
-      const domainResolution = resolveDomainAction(base, activeCartridge, normalizedAction)
-      const dangerDirective = domainResolution?.status === 'rejected' || domainOwnsDanger(domainResolution)
+      const domainResolution = resolveCampaignAction(base, activeCartridge, normalizedAction)
+        ?? resolveDomainAction(base, activeCartridge, normalizedAction)
+      const dangerDirective = domainResolution
         ? undefined
         : buildDangerDirective(base, activeCartridge, normalizedAction)
       // Governed actions already contain authored bilingual consequence text,

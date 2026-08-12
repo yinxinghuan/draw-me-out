@@ -22,4 +22,12 @@ assert.deepEqual(malformedImageMetadata.blocks.map((block) => block.text), ['雨
 assert.equal(extractSceneImageSubject(malformedImageMetadata.raw), 'player')
 assert.equal(extractSceneImagePrompt(malformedImageMetadata.raw), 'SUBJECT A beneath suspended rain, no text')
 
+const nestedQuote = parseStoryProtocol('[choices: "拿起“最后的钥匙”碎片仔细查看"|"把碎片交给小残"|"先观察门上的裂缝"]', 'zh')
+const nestedChoices = nestedQuote.commands.find((command) => command.type === 'choices')
+assert.deepEqual(nestedChoices?.type === 'choices' ? nestedChoices.choices : [], [
+  '拿起“最后的钥匙”碎片仔细查看',
+  '把碎片交给小残',
+  '先观察门上的裂缝',
+])
+
 console.log(JSON.stringify({ ok: true, facts: facts.length, choices: choices?.type === 'choices' ? choices.choices.length : 0 }))

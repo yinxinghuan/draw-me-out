@@ -317,8 +317,9 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const image = engine.save.blocks.find((block) => block.id === `image-${scene}` && block.kind === 'image')
   const imageIndex = image ? engine.save.blocks.indexOf(image) : engine.save.blocks.length
   const previousReady = engine.save.blocks.slice(0, imageIndex).reverse().find((block) => block.kind === 'image' && block.data?.status === 'ready' && block.data?.url)
-  const status = String(image?.data?.status ?? 'idle') as ImageBlockStatus
+  const status = String(image?.data?.status ?? (previousReady ? 'ready' : 'idle')) as ImageBlockStatus
   const imageUrl = status === 'ready' ? String(image?.data?.url ?? '') : String(previousReady?.data?.url ?? '')
+  const holdingPrevious = Boolean(image && status !== 'ready' && (previousReady?.data?.url || cartridge.entryImage || cartridge.coverImage))
   const videoUrl = String(image?.data?.videoUrl ?? '')
   const videoStatus = String(image?.data?.videoStatus ?? 'idle')
   const isPreview = previewScene != null && previewScene !== engine.save.scene
@@ -375,11 +376,12 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const stageClass = `ct-stage is-${turnPhase}${openingDecision ? ' is-opening' : ''}${isPreview ? ' is-preview' : ''}${compactCivicBeat ? ' is-compact-beat' : ''}${emptyCivicBeat ? ' is-empty-beat' : ''}`
   const stageStyle = civicBeatHeight == null ? undefined : { '--ct-civic-local-tray': `${civicBeatHeight}px` } as React.CSSProperties
   return <section className={stageClass} style={stageStyle} aria-label={t(cartridge.locale, 'currentScene')}>
-    <figure className={`ct-stage__media is-${status}${videoUrl ? ' has-video' : ''}`}>
+    <figure className={`ct-stage__media is-${status}${videoUrl ? ' has-video' : ''}${holdingPrevious ? ' is-holding-previous' : ''}`}>
       {videoUrl && videoStatus === 'ready'
         ? <video src={videoUrl} poster={String(image?.data?.url ?? '')} controls playsInline muted preload="metadata" />
         : <img src={imageUrl || cartridge.entryImage || cartridge.coverImage} alt={t(cartridge.locale, 'imageAlt', { name: image?.text ?? engine.save.location })} draggable={false} />}
       {status !== 'ready' && <div className="ct-stage__developing" aria-live="polite"><span /><div><small>{t(cartridge.locale, 'sceneNumber', { n: scene + 1 })}</small><strong>{t(cartridge.locale, status === 'failed' ? 'imageFailed' : 'imageGenerating')}</strong></div>{status === 'failed' && image && <button type="button" onClick={() => engine.retryImage(image.id)}>{t(cartridge.locale, 'retry')}</button>}</div>}
+      {holdingPrevious && <span className="ct-stage__previous-frame">{t(cartridge.locale, 'previousScene')}</span>}
       {videoStatus === 'generating' && <div className="ct-stage__video-status"><Icon name="image" /><span>{t(cartridge.locale, 'videoGenerating')}</span></div>}
       {image?.data?.milestone && <span className="ct-stage__milestone">{t(cartridge.locale, 'milestone')}</span>}
       {uiVariant === 'civic' && actionText && <div className={`ct-stage__action${engine.pendingAction && !isPreview ? ' is-pending' : ''}`}><small>{t(cartridge.locale, 'yourAction')}</small><p>{actionText}</p></div>}
