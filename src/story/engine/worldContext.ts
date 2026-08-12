@@ -65,6 +65,7 @@ export function buildWorldContext(context: AdapterContext) {
       facts: save.facts,
       danger: save.danger,
       dangerDirective: context.dangerDirective,
+      domainResolution: context.domainResolution,
       finale: { status: save.finale.status, reason: save.finale.reason },
       recentStory: visibleHistory(save.blocks),
     },

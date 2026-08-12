@@ -14,7 +14,9 @@
     "test:danger": "TMPDIR=/private/tmp tsx _qa/danger-director.ts",
     "test:ending": "TMPDIR=/private/tmp tsx _qa/ending-director.ts",
     "test:plain-language": "TMPDIR=/private/tmp tsx _qa/plain-language.ts",
-    "test:image-queue": "TMPDIR=/private/tmp tsx _qa/image-queue.ts"
+    "test:character-debut": "TMPDIR=/private/tmp tsx _qa/plain-language.ts",
+    "test:image-queue": "TMPDIR=/private/tmp tsx _qa/image-queue.ts",
+    "test:domain": "TMPDIR=/private/tmp tsx _qa/domain-rules.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

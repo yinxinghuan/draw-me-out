@@ -1,8 +1,9 @@
-import { SCENE_IMAGE_PROMPT_VERSION, type CharacterDefinition, type DangerDirective, type ImageBlockStatus, type ParsedCommand, type ParsedScene, type SceneImageSubject, type StoryBlock, type StoryCartridge, type StoryCharacter, type StorySave, type VideoBlockStatus } from '../types'
+import { SCENE_IMAGE_PROMPT_VERSION, type CharacterDefinition, type DangerDirective, type DomainActionResolution, type ImageBlockStatus, type ParsedCommand, type ParsedScene, type SceneImageSubject, type StoryBlock, type StoryCartridge, type StoryCharacter, type StorySave, type VideoBlockStatus } from '../types'
 import { t } from '../i18n'
 import { chooseSceneImage } from './imageDirector'
 import { createInitialDangerState, normalizeDangerState, settleDangerTurn } from './dangerDirector'
 import { canStartTrueEnding } from './endingDirector'
+import { applyDomainResolution, domainAllowsModelCommand, syncDomainDerivedState } from './domainRules'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -10,7 +11,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: string): StorySave {
   const initialPartyMemberIds = cartridge.initialPartyMemberIds ?? cartridge.characters.filter((character) => character.initialStatus === 'companion').map((character) => character.id)
-  return {
+  const initial: StorySave = {
     version: 7, cartridgeId: cartridge.id, locale: cartridge.locale, remoteChatId, entered: false, scene: 0,
     location: cartridge.opening.location, time: cartridge.opening.time, objective: cartridge.opening.objective,
     stats: Object.fromEntries(cartridge.statDefinitions.map((stat) => [stat.id, stat.initial])),
@@ -31,6 +32,7 @@ export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: stri
     sessionEnded: false,
     finale: { status: 'idle' },
   }
+  return syncDomainDerivedState(initial, cartridge)
 }
 
 type CharacterCommand = Extract<ParsedCommand, { type: 'character_update' | 'party_change' }>
@@ -335,6 +337,7 @@ export function applyParsedScene(
   imagePrompt?: string,
   imageSubject?: SceneImageSubject,
   dangerDirective?: DangerDirective,
+  domainResolution?: DomainActionResolution,
 ): StorySave {
   const next: StorySave = {
     ...save, locale: cartridge.locale, scene: save.scene + 1,
@@ -352,8 +355,10 @@ export function applyParsedScene(
   const confirmedFacts: Array<{ id: string; value: string }> = []
   let dangerCheckAdded = false
   let trueEndingReason = ''
+  const adjudicatedParsed: ParsedScene = domainResolution ? { ...parsed, commands: [] } : parsed
 
   const commands = [...parsed.commands, ...inferInventoryCommands(parsed, cartridge)]
+    .filter((command) => domainAllowsModelCommand(command, domainResolution))
   commands.forEach((command, index) => {
     const effectId = `effect-${next.scene}-${index}`
     if (command.type === 'choices') {
@@ -468,8 +473,6 @@ export function applyParsedScene(
     })
   }
 
-  next.facts = deriveCampaignFacts(next.facts)
-
   if (dangerDirective?.phase === 'resolution' && dangerDirective.check && !dangerCheckAdded) {
     const check = dangerDirective.check
     const succeeded = check.outcome === 'critical-success' || check.outcome === 'success' || check.outcome === 'costly-success'
@@ -478,7 +481,9 @@ export function applyParsedScene(
       data: { dc: check.dc, roll: check.roll, modifier: check.modifier, total: check.total, outcome: check.outcome },
     })
   }
-  effects.push(...settleDangerTurn(save, next, parsed, cartridge, dangerDirective))
+  if (domainResolution?.status !== 'rejected') effects.push(...settleDangerTurn(save, next, adjudicatedParsed, cartridge, dangerDirective))
+  effects.push(...applyDomainResolution(next, cartridge, domainResolution))
+  next.facts = deriveCampaignFacts(next.facts)
 
   if (trueEndingReason && next.finale.status !== 'complete' && canStartTrueEnding(next, cartridge)) {
     next.sessionEnded = true
@@ -492,8 +497,8 @@ export function applyParsedScene(
   // the dedicated resume action supplied by the Composer.
   if (!next.sessionEnded && next.choices.length < 2) next.choices = createRecoveryChoices(next, cartridge)
 
-  const image = chooseSceneImage(save, next, parsed, cartridge, imagePrompt, imageSubject, actionId)
-  const milestone = milestoneReason(parsed, dangerDirective)
+  const image = chooseSceneImage(save, next, adjudicatedParsed, cartridge, imagePrompt, imageSubject, actionId)
+  const milestone = milestoneReason(adjudicatedParsed, dangerDirective)
   next.blocks = [
     ...next.blocks,
     ...effects,
@@ -503,5 +508,5 @@ export function applyParsedScene(
       ...(milestone ? { milestone, videoStatus: 'queued' } : {}),
     })] : []),
   ]
-  return next
+  return syncDomainDerivedState(next, cartridge)
 }

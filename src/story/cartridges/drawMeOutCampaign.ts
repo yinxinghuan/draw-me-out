@@ -77,14 +77,14 @@ Before you answer, one stripe disappears beneath your feet.
         zhMatch: ['知不知道自己在画里', '知道自己'], enMatch: ['know they are inside', 'ask whether'],
         zh: `“画是什么？”那群人一起问。
 下一秒，天空降下一块巨大的橡皮，试图把这个问题擦掉。你扯下门框上的发亮按键；它在掌心震动，像一个已经后悔过三次的心脏。
-[inventory: action="add" item_id="undo-key" item="撤销键" count="3" rarity="legendary" detail="一枚从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="撤销键" count="1" rarity="legendary" detail="一枚从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 [fact: id="asked-first-fourth-wall-question" value="true"]
 门后的颜色塌成深井。你连同那个没得到回答的问题一起坠落。
 [state: value="在纯色深井里抓住一个不会变化的东西"]
 [choices: "握紧撤销键"|"抓住那根红线"|"大声喊有没有人"]`,
         en: `“What is a picture?” the crowd asks together.
 An enormous eraser descends from the sky to remove the question. You tear the glowing key from the frame; it beats in your palm like a heart that has regretted something three times already.
-[inventory: action="add" item_id="undo-key" item="Undo Key" count="3" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="Undo Key" count="1" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 [fact: id="asked-first-fourth-wall-question" value="true"]
 The color beyond the door collapses into a shaft. You fall with the unanswered question.
 [state: value="Catch something in the color shaft that will not change"]
@@ -95,13 +95,13 @@ The color beyond the door collapses into a shaft. You fall with the unanswered q
         zhMatch: ['撕下门框', '发亮的按键'], enMatch: ['glowing key', 'pull the'],
         zh: `按键一离开门框，整座城市立刻后悔了。建筑向上一帧倒退，雨水飞回云里，那个换脸的路人退回一句尚未说出口的话。
 你看见按键上已有三道旧划痕——显然有人在你之前，或者某个你，已经用过它。
-[inventory: action="add" item_id="undo-key" item="撤销键" count="3" rarity="legendary" detail="从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="撤销键" count="1" rarity="legendary" detail="从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 门后的颜色塌成深井，把你拉了进去。
 [state: value="在纯色深井里抓住一个不会变化的东西"]
 [choices: "握紧撤销键"|"抓住那根红线"|"大声喊有没有人"]`,
         en: `The instant the key leaves the frame, the entire city regrets itself. Buildings retreat one frame, rain flies back into clouds, and the changing-face passerby backs into an unsaid sentence.
 Three old scratches mark the key. Someone before you—or some version of you—has already used it.
-[inventory: action="add" item_id="undo-key" item="Undo Key" count="3" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="Undo Key" count="1" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 The color beyond the door collapses into a shaft and pulls you in.
 [state: value="Catch something in the color shaft that will not change"]
 [choices: "Hold the Undo Key tight"|"Grab the thin red line"|"Shout to see if anyone is there"]`,
@@ -111,13 +111,13 @@ The color beyond the door collapses into a shaft and pulls you in.
         zhMatch: ['跳进没有名字的颜色', '跳进'], enMatch: ['jump into the color', 'color with no name'],
         zh: `你跳了。那种颜色先试图把你画成英雄，又改成游客，最后干脆把“人”这个选项取消。
 你从门框上顺手扯下一枚发亮按键。它有三道旧划痕，仿佛另一个你已经失败过三次。
-[inventory: action="add" item_id="undo-key" item="撤销键" count="3" rarity="legendary" detail="从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="撤销键" count="1" rarity="legendary" detail="从画面边缘撬下的实体按键，表面已有三道旧划痕" effect="可逆转一次重大后果、救回被删除的角色或重开坍缩入口；每次使用会永久删去一段记忆、关系或已确认事实" lore="它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里" metrics="剩余次数: 3|旧划痕: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 [widget: self, remove: 6]
 [state: value="在纯色深井里保住自己的完整轮廓"]
 [choices: "握紧撤销键"|"抓住那根红线"|"大声喊有没有人"]`,
         en: `You jump. The color first tries to paint you as a hero, changes its mind and makes you a tourist, then removes “person” as an option entirely.
 On the way through, you tear a glowing key from the frame. Three old scratches suggest another you has already failed three times.
-[inventory: action="add" item_id="undo-key" item="Undo Key" count="3" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
+[inventory: action="add" item_id="undo-key" item="Undo Key" count="1" rarity="legendary" detail="A physical key pried from the edge of the picture, already bearing three old scratches" effect="Reverses one major consequence, restores a deleted character, or reopens a collapsed entrance; each use permanently deletes a memory, relationship, or confirmed fact" lore="The key was already used before you found it, suggesting this may not be your first visit" metrics="Charges: 3|Old scratches: 3" image_prompt="single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square"]
 [widget: self, remove: 6]
 [state: value="Keep your complete outline inside the color shaft"]
 [choices: "Hold the Undo Key tight"|"Grab the thin red line"|"Shout to see if anyone is there"]`,

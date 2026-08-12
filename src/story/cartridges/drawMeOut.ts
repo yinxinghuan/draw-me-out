@@ -1,6 +1,6 @@
 import type {
-  Locale, StoryCartridge, StoryDangerDirector, StoryEndingAnchor, StoryEndingCapability,
-  StoryEndingDirector, StoryImageDirector,
+  InventoryItem, Locale, StoryCartridge, StoryDangerDirector, StoryDomainRules, StoryEndingAnchor,
+  StoryEndingCapability, StoryEndingDirector, StoryImageDirector,
 } from '../types'
 import { buildDrawMeOutCampaign } from './drawMeOutCampaign'
 
@@ -167,6 +167,142 @@ function build(locale: Locale): StoryCartridge {
     },
   }
 
+  const undoKey: InventoryItem = {
+    id: 'undo-key', label: s('撤销键', 'Undo Key'), count: 1, rarity: 'legendary',
+    detail: s('一枚从画面边缘撬下的实体按键，表面已有三道旧划痕。', 'A physical key pried from the edge of the picture, already bearing three old scratches.'),
+    effect: s('可逆转一次重大后果，但每次使用必须永久删去一段记忆、关系或已确认事实。', 'It can reverse one major consequence, but every use must permanently delete a memory, relationship, or confirmed fact.'),
+    lore: s('它在你拿到以前就有使用痕迹，说明这可能不是你第一次来到这里。', 'It was already used before you found it, suggesting this may not be your first visit.'),
+    metrics: [{ id: 'remaining-uses', label: s('剩余次数', 'Charges'), value: '3' }, { id: 'old-scratches', label: s('旧划痕', 'Old scratches'), value: '3' }],
+    imagePrompt: 'single physical undo key with three old scratches and a faint red cursor filament, isolated against 88 percent near-white non-space, no floor, no horizon, object only, no symbols, no readable text, square',
+  }
+  const clue = (id: string): InventoryItem => ({
+    id, count: 1, rarity: 'rare',
+    ...(id === 'coordinate-weight' ? {
+      label: s('回家线索 · 重量', 'Home Clue · Weight'),
+      detail: s('一枚沉甸甸的蓝色碎片，拿起时会让周围东西重新落地。', 'A heavy cobalt fragment that makes nearby things fall again.'),
+      effect: s('在漂浮、幻觉或外形混乱时，让你暂时站稳一次。', 'Lets you stand firm once during floating, illusion, or identity drift.'),
+      lore: s('会飞走的城市里，那名送货员第一次双脚落地后交给你。', 'Given by the courier after standing on both feet for the first time.'),
+      metrics: [{ id: 'proof', label: s('证明', 'Proof'), value: s('身体有重量', 'Bodies have weight') }],
+      imagePrompt: 'single dense cobalt home-clue fragment against a near-blank neutral field, bending one thin red filament, one disconnected blue color relation, object only, no floor, no horizon, no symbols, no writing, square',
+    } : id === 'coordinate-choice' ? {
+      label: s('回家线索 · 空位', 'Home Clue · Blank'),
+      detail: s('一枚透明碎片，中间总留着一块谁也不能替你填满的空位。', 'A transparent fragment whose center keeps one space nobody else can fill.'),
+      effect: s('可以挡住一次别人替你决定的命运或错误称呼。', 'Blocks one destiny or false name chosen for you.'),
+      lore: s('王国第一次允许沉默后，国王从王冠里取出。', 'Removed from the crown after the kingdom first allowed silence.'),
+      metrics: [{ id: 'proof', label: s('证明', 'Proof'), value: s('选择需要空位', 'Choice needs room') }],
+      imagePrompt: 'single transparent home-clue fragment with one deliberate empty center, near-blank neutral field, one small crown-metal feature without a full crown, no floor, no horizon, no symbols, no writing, object only, square',
+    } : {
+      label: s('回家线索 · 离开', 'Home Clue · Leaving'),
+      detail: s('一枚温热的灰白碎片，靠近没有出口的地方时会发热。', 'A warm gray fragment that heats near places with no exit.'),
+      effect: s('可以打开一次被习惯、命令或恐惧锁死的出口。', 'Opens one way out locked by habit, orders, or fear.'),
+      lore: s('七年会议第一次散会后，黎姨从废纸篓里捡出来交给你。', 'Given by Auntie Li after the seven-year meeting ended.'),
+      metrics: [{ id: 'proof', label: s('证明', 'Proof'), value: s('人可以结束一段经历', 'A person can end an experience') }],
+      imagePrompt: 'single warm gray home-clue fragment with one worn brass-key material hint against a near-blank neutral field, no full key, no floor, no horizon, no symbols, no writing, object only, square',
+    }),
+  })
+  const c = (cn: string, en: string) => s(cn, en)
+  const domainRules: StoryDomainRules = {
+    derivedItemMetrics: [{ itemId: 'undo-key', metricId: 'remaining-uses', label: c('剩余次数', 'Charges'), factId: 'undo-key-uses', maximum: 3, mode: 'remaining-from-used' }],
+    derivedFacts: [
+      { factId: 'home-clue-count', mode: 'owned-item-count', itemIds: ['coordinate-weight', 'coordinate-choice', 'coordinate-leaving', 'coordinate-remembered'] },
+      { factId: 'first-coordinate-earned', mode: 'owned-item-threshold', itemIds: ['coordinate-weight', 'coordinate-choice', 'coordinate-leaving', 'coordinate-remembered'], threshold: 1 },
+      { factId: 'coordinates-four', mode: 'owned-item-threshold', itemIds: ['coordinate-weight', 'coordinate-choice', 'coordinate-leaving', 'coordinate-remembered'], threshold: 4 },
+    ],
+    rules: [
+      {
+        id: 'acquire-undo-key-jump', intent: 'acquire-undo-key',
+        match: ['立刻跳进门后的颜色', '跳进没有名字的颜色', 'Jump into the color beyond the door', 'Jump into the color with no name'],
+        requirements: [{ type: 'map', nodeId: 'unfinished-rain-city', reason: c('那扇门不在这里。', 'That door is not here.') }, { type: 'fact', id: 'undo-key-acquired', notEquals: true, reason: c('撤销键已经在你手里，门框上没有第二枚。', 'The Undo Key is already in your hand; there is no second key in the frame.') }],
+        effects: [{ type: 'inventory', action: 'add', itemId: 'undo-key', count: 1, item: undoKey }, { type: 'fact', id: 'undo-key-acquired', value: true }, { type: 'stat', id: 'self', delta: -6 }, { type: 'objective', value: c('在纯色深井里抓住一个不会变化的东西', 'Catch something in the color shaft that will not change') }],
+        successText: c('你跳进颜色里，顺手从门框扯下唯一一枚撤销键。它是一个物件，不是三把钥匙；三道旧划痕旁还剩三次可用机会。颜色随即塌成深井。', 'You jump into the color and tear the only Undo Key from the frame. It is one object, not three keys; beside its old scratches, three uses remain. The color collapses into a shaft.'),
+        successChoices: [c('握紧撤销键', 'Hold the Undo Key tight'), c('抓住那根红线', 'Grab the thin red line'), c('大声喊有没有人', 'Shout to see if anyone is there')],
+      },
+      {
+        id: 'acquire-undo-key', intent: 'acquire-undo-key',
+        match: ['提醒路人街道正在消失', '拿走门框上的发亮按键', '发亮的按键', 'Warn them that the street is vanishing', 'Take the glowing key from the frame', 'glowing key from the frame'],
+        requirements: [{ type: 'map', nodeId: 'unfinished-rain-city', reason: c('门框已经不在眼前。', 'The doorframe is no longer here.') }, { type: 'fact', id: 'undo-key-acquired', notEquals: true, reason: c('撤销键已经在你手里，门框上没有第二枚。', 'The Undo Key is already in your hand; there is no second key in the frame.') }],
+        effects: [{ type: 'inventory', action: 'add', itemId: 'undo-key', count: 1, item: undoKey }, { type: 'fact', id: 'undo-key-acquired', value: true }, { type: 'objective', value: c('在纯色深井里抓住一个不会变化的东西', 'Catch something in the color shaft that will not change') }],
+        successText: c('你从门框上扯下唯一一枚撤销键。它在掌心震动，表面已有三道旧划痕，但仍明确剩下三次使用机会。门后的颜色随即塌成深井。', 'You tear the only Undo Key from the frame. It beats in your palm, already marked by three old scratches, with exactly three uses remaining. The color beyond collapses into a shaft.'),
+        successChoices: [c('握紧撤销键', 'Hold the Undo Key tight'), c('抓住那根红线', 'Grab the thin red line'), c('大声喊有没有人', 'Shout to see if anyone is there')],
+      },
+      {
+        id: 'enter-boundless', intent: 'enter-boundless',
+        match: ['握紧撤销键', '抓住那根红线', '大声喊有没有人', 'Hold the Undo Key tight', 'Grab the thin red line', 'Shout to see if anyone is there'],
+        requirements: [{ type: 'map', nodeId: 'unfinished-rain-city', reason: c('你已经不在坠落的深井里。', 'You are no longer in the falling shaft.') }, { type: 'item', id: 'undo-key', minCount: 1, reason: c('你还没有拿到撤销键。', 'You do not have the Undo Key yet.') }],
+        effects: [{ type: 'map', nodeId: 'latent-zero' }, { type: 'fact', id: 'latent-layer-found', value: true }, { type: 'clock', value: c('没有时间 · 第一次坠落', 'No time · First fall') }, { type: 'objective', value: c('沿红线找到深处那个会动的小东西', 'Follow the red filament toward the small moving thing') }],
+        successText: c('你不再下坠，也没有落地。四周是人的眼睛无法读懂的深黑无边处：没有地面、远近或方向，只剩一根红线和几片互不相容的颜色。', 'You stop falling without landing. Around you is a matte-black non-space human eyes cannot decode: no floor, distance, or direction, only one red filament and a few incompatible scraps of color.'),
+        successChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+      },
+      {
+        id: 'meet-little-remnant', intent: 'meet-little-remnant',
+        match: ['沿着红线往前摸', '伸手碰最近的颜色碎片', '再喊一次有没有人', 'Feel forward along the red line', 'Touch the nearest scrap of color', 'Call out once more'],
+        requirements: [{ type: 'map', nodeId: 'latent-zero', reason: c('红线深处的小东西不在这里。', 'The small thing at the end of the filament is not here.') }, { type: 'fact', id: 'residual-met', notEquals: true, reason: c('你已经认识小残，它正跟着你。', 'You already know Little Remnant; it is traveling with you.') }],
+        effects: [{ type: 'party', change: 'add', characterId: 'residual' }, { type: 'fact', id: 'residual-met', value: true }, { type: 'objective', value: c('选一扇门，先帮一个眼前的人', 'Choose one doorway and help one person first') }],
+        successText: c('红线打了个结，漏出一只没折完的白纸鸟：边缘缺块，尾巴仍连着红线。那个声音叫它“没删干净的东西”，名字太长，它只留下“小残”。它承认自己也迷路了，随后明确加入你，做你的画外向导。三组碎片浮出三个可见的麻烦。', 'The filament knots and releases an unfinished white paper bird with missing edges and the red line still attached as its tail. A voice called it something the system failed to erase; the name was too long, so it kept “Little Remnant.” It admits it is lost too, then visibly joins you as a guide. Three feature clusters reveal three immediate problems.'),
+        successChoices: [c('去救快飞走的送货员', 'Save the courier drifting away'), c('去帮国王说完一句话', 'Help the king finish one sentence'), c('去结束那场七年会议', 'End the seven-year meeting')],
+      },
+      {
+        id: 'route-flying-city', intent: 'choose-first-world', match: ['去救快飞走的送货员', 'Save the courier drifting away'],
+        requirements: [{ type: 'map', nodeId: 'latent-zero', reason: c('这扇入口只在无边处出现。', 'This entrance only appears in the Boundless.') }, { type: 'character', id: 'residual', status: 'companion', reason: c('先沿红线找到那个知道入口的小东西。', 'First follow the filament to the small guide who knows the entrances.') }, { type: 'fact', id: 'first-world-route', equals: 'unset', reason: c('第一扇门已经选定，不能同时进入另一个世界。', 'The first doorway is already committed; you cannot enter another world at the same time.') }],
+        effects: [{ type: 'fact', id: 'first-world-route', value: 'flying-city' }, { type: 'map', nodeId: 'flying-city-rope-street' }, { type: 'stat', id: 'compute', delta: -6 }, { type: 'objective', value: c('先救下送货员，再让这条街的人落地', 'Save the courier, then help the street touch ground') }],
+        successText: c('你穿过碎片，立刻开始向天空坠落。这里把重力按月出售，一名试用期刚结束的送货员抱着早餐箱缓慢升空。', 'You cross the fragment and immediately fall upward. This city sells gravity by the month, and a courier whose trial just expired rises with a breakfast box.'),
+        successChoices: [c('抓住送货员和早餐箱', 'Catch the courier and breakfast box'), c('让小残钻进收费塔检修口', 'Send Little Remnant into the service hatch'), c('告诉收费塔早餐属于公共服务', 'Claim breakfast is a public service')],
+        rejectionChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+      },
+      {
+        id: 'route-words-kingdom', intent: 'choose-first-world', match: ['去帮国王说完一句话', 'Help the king finish one sentence'],
+        requirements: [{ type: 'map', nodeId: 'latent-zero', reason: c('这扇入口只在无边处出现。', 'This entrance only appears in the Boundless.') }, { type: 'character', id: 'residual', status: 'companion', reason: c('先沿红线找到小残。', 'First follow the filament to Little Remnant.') }, { type: 'fact', id: 'first-world-route', equals: 'unset', reason: c('第一扇门已经选定，不能同时改选。', 'The first doorway is already committed and cannot be changed simultaneously.') }],
+        effects: [{ type: 'fact', id: 'first-world-route', value: 'words-kingdom' }, { type: 'map', nodeId: 'words-kingdom-palace' }, { type: 'stat', id: 'trace', delta: 5 }, { type: 'objective', value: c('在预言补完名字以前结束加冕词', 'End the coronation sentence before prophecy supplies a name') }],
+        successText: c('你落进一场停在半句上的加冕礼。天空正替国王补完继承人的名字，每个错误名字都会让城堡长出一座牢房。', 'You land in a coronation frozen mid-sentence. The sky is completing the heir’s name for the king, and every wrong name grows a prison.'),
+        successChoices: [c('让国王把这句话改成问题', 'Ask the king to turn it into a question'), c('让小残咬掉最后一个词', 'Have Little Remnant bite off the last word'), c('报出一个根本不存在的人', 'Name someone who does not exist')],
+        rejectionChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+      },
+      {
+        id: 'route-endless-meeting', intent: 'choose-first-world', match: ['去结束那场七年会议', 'End the seven-year meeting'],
+        requirements: [{ type: 'map', nodeId: 'latent-zero', reason: c('这扇入口只在无边处出现。', 'This entrance only appears in the Boundless.') }, { type: 'character', id: 'residual', status: 'companion', reason: c('先沿红线找到小残。', 'First follow the filament to Little Remnant.') }, { type: 'fact', id: 'first-world-route', equals: 'unset', reason: c('第一扇门已经选定，不能同时改选。', 'The first doorway is already committed and cannot be changed simultaneously.') }],
+        effects: [{ type: 'fact', id: 'first-world-route', value: 'endless-meeting' }, { type: 'map', nodeId: 'endless-meeting-room-three' }, { type: 'stat', id: 'self', delta: -4 }, { type: 'objective', value: c('结束周会，同时保住唯一记得前六年的人', 'End the meeting without losing the only person who remembers') }],
+        successText: c('你坐进一场已经开了七年的周会。主管每翻一页空白幻灯片，办公室就换一种故事；只有保洁员黎姨仍记得前六年。', 'You sit down in a meeting that has lasted seven years. Every blank slide changes the office genre; only Auntie Li, the cleaner, remembers the previous six years.'),
+        successChoices: [c('拔掉那台没接电的投影仪', 'Unplug the projector with no cable'), c('让黎姨问谁真的有话要说', 'Ask Auntie Li who truly needs to speak'), c('举手提议现在就散会', 'Raise your hand and end the meeting now')],
+        rejectionChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+      },
+      {
+        id: 'claim-weight-clue', intent: 'claim-first-home-clue', match: ['抓住送货员和早餐箱', '让小残钻进收费塔检修口', '告诉收费塔早餐属于公共服务', 'Catch the courier and breakfast box', 'Send Little Remnant into the service hatch', 'Claim breakfast is a public service'],
+        requirements: [{ type: 'map', nodeId: 'flying-city-rope-street', reason: c('送货员和收费塔不在这里。', 'The courier and billing tower are not here.') }, { type: 'fact', id: 'coordinate-body', notEquals: true, reason: c('重量线索已经取得，不能从同一个麻烦再拿一次。', 'The Weight clue was already claimed and cannot be awarded twice.') }],
+        effects: [{ type: 'inventory', action: 'add', itemId: 'coordinate-weight', count: 1, item: clue('coordinate-weight') }, { type: 'fact', id: 'coordinate-body', value: true }, { type: 'stat', id: 'self', delta: 5 }, { type: 'stat', id: 'trace', delta: 8 }, { type: 'map', nodeId: 'latent-zero' }, { type: 'clock', value: c('没有时间 · 第二次返回', 'No time · Second return') }, { type: 'objective', value: c('问清回家还缺什么，或者寻找下一扇门', 'Ask what else home needs or find the next door') }],
+        successText: c('你的办法让整条街得到十分钟公共重力。送货员第一次站着完成配送，把唯一一枚沉甸甸的蓝色“重量”线索交给你。小残随后带你回到无边处。', 'Your plan grants the street ten minutes of public gravity. After completing a delivery on both feet for the first time, the courier gives you the one heavy blue Weight clue. Little Remnant brings you back to the Boundless.'),
+        successChoices: [c('问小残回家还缺什么', 'Ask what else home needs'), c('把刚拿到的线索放开', 'Release the clue into the blank'), c('自己描述一扇新门', 'Describe a new door yourself')],
+      },
+      {
+        id: 'claim-choice-clue', intent: 'claim-first-home-clue', match: ['让国王把这句话改成问题', '让小残咬掉最后一个词', '报出一个根本不存在的人', 'Ask the king to turn it into a question', 'Have Little Remnant bite off the last word', 'Name someone who does not exist'],
+        requirements: [{ type: 'map', nodeId: 'words-kingdom-palace', reason: c('国王和预言不在这里。', 'The king and prophecy are not here.') }, { type: 'fact', id: 'coordinate-choice', notEquals: true, reason: c('空位线索已经取得，不能重复领取。', 'The Blank clue was already claimed and cannot be awarded twice.') }],
+        effects: [{ type: 'inventory', action: 'add', itemId: 'coordinate-choice', count: 1, item: clue('coordinate-choice') }, { type: 'fact', id: 'coordinate-choice', value: true }, { type: 'stat', id: 'trace', delta: 9 }, { type: 'map', nodeId: 'latent-zero' }, { type: 'clock', value: c('没有时间 · 第二次返回', 'No time · Second return') }, { type: 'objective', value: c('问清回家还缺什么，或者寻找下一扇门', 'Ask what else home needs or find the next door') }],
+        successText: c('你让预言第一次没能说完一句话。国王从王冠里取出唯一一枚透明“空位”线索交给你；小残赶在天空替你命名以前，把你拖回无边处。', 'You make prophecy fail to finish one sentence. The king gives you the one transparent Blank clue from his crown, and Little Remnant pulls you back before the sky names you.'),
+        successChoices: [c('问小残回家还缺什么', 'Ask what else home needs'), c('把刚拿到的线索放开', 'Release the clue into the blank'), c('自己描述一扇新门', 'Describe a new door yourself')],
+      },
+      {
+        id: 'claim-leaving-clue', intent: 'claim-first-home-clue', match: ['拔掉那台没接电的投影仪', '让黎姨问谁真的有话要说', '举手提议现在就散会', 'Unplug the projector with no cable', 'Ask Auntie Li who truly needs to speak', 'Raise your hand and end the meeting now'],
+        requirements: [{ type: 'map', nodeId: 'endless-meeting-room-three', reason: c('投影仪和黎姨不在这里。', 'The projector and Auntie Li are not here.') }, { type: 'fact', id: 'coordinate-boundary', notEquals: true, reason: c('离开线索已经取得，不能重复领取。', 'The Leaving clue was already claimed and cannot be awarded twice.') }],
+        effects: [{ type: 'inventory', action: 'add', itemId: 'coordinate-leaving', count: 1, item: clue('coordinate-leaving') }, { type: 'fact', id: 'coordinate-boundary', value: true }, { type: 'stat', id: 'self', delta: 7 }, { type: 'map', nodeId: 'latent-zero' }, { type: 'clock', value: c('没有时间 · 第二次返回', 'No time · Second return') }, { type: 'objective', value: c('看看线索怎样改变无边处，再决定下一步', 'See how the clue changed the Boundless, then decide what comes next') }],
+        successText: c('七年里第一次，没有人翻页。办公室恢复成普通房间，黎姨把唯一一枚温热的“离开”线索交给你；你和小残赶在主管说“等一下”以前回到无边处。', 'For the first time in seven years, nobody advances the slide. The office becomes ordinary, and Auntie Li gives you the one warm Leaving clue before you and Little Remnant return to the Boundless.'),
+        successChoices: [c('问小残回家还缺什么', 'Ask what else home needs'), c('把刚拿到的线索放开', 'Release the clue into the blank'), c('自己描述一扇新门', 'Describe a new door yourself')],
+      },
+      {
+        id: 'undo-with-rain-cost', intent: 'use-undo-key-with-cost', match: ['用撤销键忘掉悬停的雨', '按下撤销键并忘掉悬停的雨', 'Use Undo and forget the suspended rain', 'Press Undo and forget the frozen rain'],
+        requirements: [{ type: 'item', id: 'undo-key', minCount: 1, reason: c('你没有撤销键。', 'You do not have the Undo Key.') }, { type: 'fact', id: 'undo-key-uses', max: 2, reason: c('撤销键已经没有剩余次数。', 'The Undo Key has no uses remaining.') }, { type: 'danger', phases: ['warning', 'confrontation'], reason: c('眼前没有需要撤销的重大后果。', 'There is no major consequence to undo right now.') }, { type: 'fact', id: 'rain-is-pixels', equals: true, reason: c('你已经不记得悬停的雨，不能再次支付同一段记忆。', 'You no longer remember the suspended rain, so the same memory cannot be paid twice.') }, { type: 'fact', id: 'undo-cost-rain-spent', notEquals: true, reason: c('悬停的雨这段记忆已经永久失去。', 'The memory of the suspended rain is already permanently gone.') }],
+        effects: [{ type: 'fact-add', id: 'undo-key-uses', delta: 1 }, { type: 'fact', id: 'rain-is-pixels', value: false }, { type: 'fact', id: 'undo-cost-rain-spent', value: true }, { type: 'fact', id: 'first-optimizer-survived', value: true }, { type: 'stat', id: 'trace', delta: -18 }, { type: 'danger', outcome: 'success' }, { type: 'objective', value: c('继续寻找回家线索，并弄清回家会让谁消失', 'Keep finding Home Clues and learn who going home might erase') }, { type: 'session', ended: true, reason: c('你帮助了第一个画中世界，取得一条回家线索，并用一段真实记忆支付了第一次撤销。旅程将从另外五幅画继续。', 'You helped the first picture world, recovered one Home Clue, and paid for the first Undo with a real memory. The journey continues through five other pictures.') }],
+        successText: c('你明确选择忘掉“雨曾悬在半空”这件事，撤销键才肯按下。白色退去，小残恢复原样；按键剩余两次，而那段雨的记忆永久空了。', 'You explicitly choose to forget that the rain once hung in midair, and only then does the Undo Key depress. The white recedes and Little Remnant returns to itself. Two uses remain, while that rain memory is permanently blank.'),
+        successChoices: [c('进入下一幅陌生的画', 'Enter the next unfamiliar picture'), c('先问小残一个问题', 'Ask Little Remnant one question first'), c('检查带回来的线索', 'Examine the clue you brought back')],
+      },
+      {
+        id: 'undo-without-cost', intent: 'use-undo-key-without-cost', match: ['按下撤销键退回刚才', '按下撤销键', 'Press Undo and return to before', 'Press Undo'],
+        requirements: [{ type: 'fact', id: 'undo-cost-selected', equals: true, reason: c('撤销不能免费发生。先明确说出你愿意永久失去哪段记忆、关系或事实。', 'Undo cannot happen for free. First name the memory, relationship, or fact you will permanently lose.') }], effects: [],
+        successText: c('撤销键没有动。', 'The Undo Key does not move.'),
+        successChoices: [c('用撤销键，忘掉悬停的雨', 'Use Undo and forget the suspended rain'), c('把线索交给小残让它先跑', 'Give the clue to Little Remnant and tell it to run'), c('不用撤销，自己决定怎么做', 'Do not Undo; decide another action')],
+        rejectionChoices: [c('用撤销键，忘掉悬停的雨', 'Use Undo and forget the suspended rain'), c('把线索交给小残让它先跑', 'Give the clue to Little Remnant and tell it to run'), c('不用撤销，自己决定怎么做', 'Do not Undo; decide another action')],
+      },
+    ],
+  }
+
   const chapters = [
     {
       id: 'unfinished-opening', title: s('序章：这张图还没画完', 'Prologue: This Picture Is Not Finished'), unlock: s('开局立即进行', 'Available immediately'),
@@ -323,9 +459,17 @@ function build(locale: Locale): StoryCartridge {
         : ['use something visibly wrong', 'talk to or protect someone present', 'leave, hide, or use something already held'],
     },
     dangerDirector,
+    domainRules,
     endingDirector,
     initialFacts: {
       'undo-total-charges': 3,
+      'undo-key-acquired': false,
+      'undo-key-uses': 0,
+      'undo-cost-rain-spent': false,
+      'first-world-route': 'unset',
+      'home-clue-count': 0,
+      'first-coordinate-earned': false,
+      'coordinates-four': false,
       'coordinate-target': 4,
       'fourth-wall-level': 0,
       'previous-run-suspected': true,
@@ -388,6 +532,24 @@ function build(locale: Locale): StoryCartridge {
         detail: s('会飞走的城市、说话会成真的王国、散不了会的办公室、会贴标签的博物馆、儿童画海岸与被丢掉的画。', 'The Flying City, the Kingdom Where Words Come True, the Endless Meeting, the Labeling Museum, Child-Drawn Coast, and the Discarded Pictures.'),
         lore: s('每幅画都有一个一眼能看懂的麻烦，也藏着一条回家线索。', 'Each picture has one visible problem and hides one Home Clue.'),
         facts: [s('一次只解决一个眼前麻烦', 'Solve one immediate problem at a time'), s('也可以自己描述一扇新门', 'The player may describe a new door')],
+      },
+      {
+        id: 'flying-city-rope-street', label: s('会飞走的城市 · 绳索街', 'The Flying City · Rope Street'), connectedTo: s('画外之地 · 无边处', 'Outside the Pictures · The Boundless'),
+        detail: s('没钱的人用绳索把自己拴在街上；收费塔决定谁能踩到地面。', 'People without subscriptions tie themselves to the street while a billing tower decides who may touch ground.'),
+        lore: s('这里把落地当成收费服务。', 'This city treats standing on the ground as a premium service.'),
+        facts: [s('送货员正在升空', 'A courier is rising'), s('收费塔控制本区重力', 'The billing tower controls local gravity')],
+      },
+      {
+        id: 'words-kingdom-palace', label: s('说话会成真的王国 · 王宫', 'The Kingdom Where Words Come True · Palace'), connectedTo: s('画外之地 · 无边处', 'Outside the Pictures · The Boundless'),
+        detail: s('天空总抢着替人把一句话说完，错误名字会变成牢房。', 'The sky completes every sentence, and every wrong name becomes a prison.'),
+        lore: s('这里的人不敢把话说完，因为天空不允许沉默。', 'People speak in fragments because the sky does not permit silence.'),
+        facts: [s('国王不敢说出继承人', 'The king cannot name an heir'), s('每个错误名字都会生成牢房', 'Every wrong name creates a prison')],
+      },
+      {
+        id: 'endless-meeting-room-three', label: s('永远散不了会的办公室 · 第三会议室', 'The Endless Meeting · Room Three'), connectedTo: s('画外之地 · 无边处', 'Outside the Pictures · The Boundless'),
+        detail: s('一句“再补充一点”让周会开了七年，每翻一页就换一种故事。', 'One “more thing” kept a meeting alive for seven years; every slide changes its genre.'),
+        lore: s('会议从未作出决定，所以世界也不知道怎样结束。', 'The meeting never decided anything, so the world never learned how to end.'),
+        facts: [s('主管不肯结束最后一页', 'The manager will not end the last slide'), s('黎姨记得前六年', 'Auntie Li remembers the previous six years')],
       },
     ],
     initialInventory: [],

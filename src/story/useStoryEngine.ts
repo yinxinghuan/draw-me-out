@@ -11,6 +11,7 @@ import { parseStoryProtocol } from './engine/protocol'
 import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
+import { domainOwnsDanger, resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
 import { buildEndingSnapshot, normalizeFacts } from './engine/endingDirector'
 import { generateStoryEnding } from './engine/endingAdapter'
 import { t } from './i18n'
@@ -149,7 +150,9 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
     danger: normalizeDangerState(repaired.danger),
   } as StorySave
   if (!normalized.sessionEnded && normalized.choices.length < 2) normalized.choices = createRecoveryChoices(normalized, cartridge)
-  return upgradePendingSceneImagePrompts(normalized, cartridge)
+  const undoKey = normalized.inventory.find((item) => item.id === 'undo-key')
+  if (undoKey && undoKey.count > 0) undoKey.count = 1
+  return upgradePendingSceneImagePrompts(syncDomainDerivedState(normalized, cartridge), cartridge)
 }
 
 function inventoryImagePrompt(item: InventoryItem, cartridge: StoryCartridge): string {
@@ -383,10 +386,13 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
     try {
       const adapter = mode === 'remote' ? remoteAdapter : mode === 'aigram' ? aigramAdapter : mockAdapter
       const base = localizeKnownState(saveRef.current, cartridge, activeCartridge)
-      const dangerDirective = buildDangerDirective(base, activeCartridge, normalizedAction)
-      const result = await adapter.send(normalizedAction, { cartridge: activeCartridge, save: base, actionId: normalizedAction, locale: actionLocale, dangerDirective }, setProgress)
+      const domainResolution = resolveDomainAction(base, activeCartridge, normalizedAction)
+      const dangerDirective = domainResolution?.status === 'rejected' || domainOwnsDanger(domainResolution)
+        ? undefined
+        : buildDangerDirective(base, activeCartridge, normalizedAction)
+      const result = await adapter.send(normalizedAction, { cartridge: activeCartridge, save: base, actionId: normalizedAction, locale: actionLocale, dangerDirective, domainResolution }, setProgress)
       const parsed = parseStoryProtocol(result.content, actionLocale)
-      commit((current) => applyParsedScene(localizeKnownState(current, cartridge, activeCartridge), parsed, activeCartridge, normalizedAction, result.imagePrompt, result.imageSubject, dangerDirective))
+      commit((current) => applyParsedScene(localizeKnownState(current, cartridge, activeCartridge), parsed, activeCartridge, normalizedAction, result.imagePrompt, result.imageSubject, dangerDirective, domainResolution))
       setPendingAction('')
       setProgress(null)
     } catch (cause) {

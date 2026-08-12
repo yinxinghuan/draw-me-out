@@ -4,7 +4,7 @@
 
 - 前端：React 18 + TypeScript，使用 Vite 5 构建，`base: './'`，可部署在任意子路径。
 - 样式：Less；默认界面为 Cinematic Civic 竖版舞台，`?ui=living` 可切换到保留的对话流分支用于对照。
-- 状态：纯 TypeScript reducer 与协议解析器；故事文本中的显式命令更新数值、地图、行囊、伙伴、事实、危险与结局状态。
+- 状态：纯 TypeScript reducer、协议解析器与领域规则裁判。自由叙事仍可使用故事命令；命中 `domainRules` 的稀缺资源、一次性奖励、路线与永久代价由本地原子事务更新。
 - 叙事：演示模式使用本地双语剧情切片；正式 AlterU 模式调用 `https://chat.aiwaves.tech/aigram/api/game-chat`，每次附带压缩后的世界合同和持久状态。
 - 图片：统一调用 AlterU Media Service `https://game.aiwaves.tech/alteru-media/api/v1/images/generations`。首页使用独立 1024×576 无人物建立镜头；运行时剧情场景为 512×640。玩家主导画面使用 `edit` + 原始公开头像 URL；环境、物品和 NPC 主导画面使用无参考的 `text`。
 - 视频：客户端已接入统一媒体服务的 5 秒、9:16 任务合同，但本游戏当前关闭自动视频；现有 4:5 剧情图不能作为合规的 9:16 首尾帧直接提交。后续只有准备独立 9:16 里程碑帧后才启用。
@@ -17,6 +17,7 @@
 - `src/story/cartridges/drawMeOut.ts`：中英文世界合同、数值、章节、危险导演、结局能力、角色、地图、视觉与音频方向。
 - `src/story/cartridges/drawMeOutCampaign.ts`：开场五幕与第一次图片世界往返的本地可玩切片。
 - `src/story/engine/reducer.ts`：唯一状态更新入口；维护物品、伙伴、地图、关系、事实、场景图和结局状态。
+- `src/story/engine/domainRules.ts`：自由文本意图匹配、前置条件裁判、原子效果、固定后续选择、派生线索事实与道具次数显示。
 - `src/story/engine/protocol.ts`：解析 `[choices]`、`[widget]`、`[inventory]`、`[fact]`、`[party_change]` 等结构化命令。
 - `src/story/engine/worldContext.ts`：把固定规则、章节目标、持久事实和近期故事压缩为 AI 上下文。
 - `src/story/engine/dangerDirector.ts`：2–4 安全回合、2 回合冷却、危险强度、检定和兜底代价。
@@ -36,7 +37,7 @@
 - `src/story/img/worlds/`：运行时方形封面与独立 16:9 无人物入口建立镜头。
 - `public/poster.png`：正式 1024×1024 英文上架海报；`poster-source.png` 保留平台 transit 原始输出，`poster-source-v1.webp` 仅归档被替换的第一版。
 - `doc/requirements.md`、`doc/visual.md`、`doc/world-brief.json`：玩法、视觉和机器可校验世界蓝图。
-- `_qa/`：协议、危险、结局与普通玩家语言自动测试。
+- `_qa/`：协议、危险、结局、普通玩家语言、领域规则恶意输出测试与真实浏览器通关证据。
 
 ## 3. 核心模块
 
@@ -45,6 +46,10 @@
 `useStoryEngine` 持有当前存档，把玩家行动交给选定适配器，再通过 `parseStoryProtocol` 与 `applyParsedScene` 原子更新状态。界面阶段固定为 `decision → resolving → result → decision`：提交后立即隐藏旧问题与选项，文字结果不等待图片，结果确认后才出现下一组选择。解析异常时会恢复至少两个与当前叙述相关的行动，不能退化成单一“继续”。
 
 世界状态包括三项数值、自定义事实、地图、行囊、固定/生成角色、队伍 ID、关系事件、危险周期、图片块和结局快照。角色 ID、物品 ID 与地图节点跨语言共用；中英文仅改变可见文案。
+
+关键剧情动作在 `drawMeOut.ts` 的 `domainRules` 中声明稳定意图。当前覆盖撤销键唯一获取、进入无边处、小残首次登场并入队、三条首世界路线、三条首线索结算，以及免费/付费撤销，共 12 条规则。玩家行动先由 `resolveDomainAction` 裁判；若匹配，模型只负责可见叙述，模型输出里的数值、事实、物品、地图、伙伴、危险、目标、时间、章节结束和选择命令都会被丢弃。本地 resolution 一次写入全部效果与三条合法后续选择；任一前置条件失败时零效果并返回当前状态真正可行的恢复选择。未匹配的自由行动继续走原 AI 流程。
+
+撤销键只存一个物品与 `undo-key-uses=0..3`；“剩余次数”由 `3 - uses` 重建。`home-clue-count`、`first-coordinate-earned` 与 `coordinates-four` 只从四个稳定线索物品 ID 派生，不再让物品和事实各写一遍。旧存档若把撤销键保存为数量 3，会规范化为数量 1；旧的无 metric id “剩余次数”条目会按本地化标签认领稳定 id，避免重复显示。
 
 故事内部仍可使用 `coordinate-*`、`optimizer-*`、`residual` 等稳定协议 ID，保证旧存档和结局条件不失效；这些 ID 不得直接出现在玩家可见文字。可见映射固定为“回家线索、抹平者、小残、我还是我、余力、被发现”。每个场景最多引入一个新概念，三个行动必须对应当前最后一个问题，并写成具体动词加眼前对象。
 
@@ -79,6 +84,7 @@
 ## 4. 扩展点
 
 - 调整主线、世界规则、三项数值、危险频率、章节和结局能力：编辑 `src/story/cartridges/drawMeOut.ts`。
+- 调整稀缺资源、路线锁、一次性奖励、撤销代价或派生里程碑：优先编辑 `drawMeOut.ts` 的 `domainRules`，保持中英文 stable id 相同，并运行 `npm run test:domain` 与 `_qa/playthrough.mjs`；只有 schema 无法表达新机制时才改 `engine/domainRules.ts`。
 - 增加或改写本地试玩分支：编辑 `src/story/cartridges/drawMeOutCampaign.ts`；每个选择标签应能匹配唯一后续结果。
 - 修改玩家可见叙事词汇时，同时更新 `src/story/adapters/aigram.ts` 的本游戏语言合同，并运行 `npm run test:plain-language`；测试会拦截术语泄漏、过长中文选项、缺失选择和旧式画外空间构图。
 - 增加图片世界：在 cartridge 的章节/地图/生成规则中定义稳定矛盾，并为切片增加 3–5 个有后果的步骤；图片提示只描述当前事件。
