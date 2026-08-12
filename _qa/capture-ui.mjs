@@ -1,7 +1,7 @@
 import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 import { mkdir } from 'node:fs/promises'
 
-const base = 'http://127.0.0.1:4188/?story_mode=demo&lang=zh'
+const base = `${process.env.QA_URL || 'http://127.0.0.1:4188'}/?story_mode=demo&lang=zh`
 const evidence = new URL('./ui/', import.meta.url).pathname
 const entryImage = 'https://cdn.aiwaves.tech/prod/telegram/avatar/643177116/1786469713308632.png'
 
@@ -36,12 +36,20 @@ async function open(viewport) {
   return { context, page }
 }
 
+async function readResult(page) {
+  await page.locator('.ct-civic-viewport.is-result').waitFor({ state: 'visible', timeout: 8_000 })
+  while (await page.locator('.ct-result-story>button:visible').count()) {
+    await page.locator('.ct-result-story>button:visible').first().click()
+  }
+  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor({ timeout: 8_000 })
+}
+
 {
   const { context, page } = await open({ width: 390, height: 844 })
   await page.screenshot({ path: `${evidence}platform-layout-entry-390x844.png`, fullPage: true })
   await page.getByRole('button', { name: /碰一下停在半空的雨/ }).click()
   await page.waitForSelector('.ct-stage')
-  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor()
+  await readResult(page)
   if (await page.locator('.st-composer').count()) throw new Error('Composer appeared before the opening result was acknowledged')
   if (await page.getByRole('button', { name: /碰.*雨/ }).count()) throw new Error('touch-rain action was duplicated after entry')
   await page.screenshot({ path: `${evidence}platform-layout-first-result-390x844.png`, fullPage: true })
@@ -50,7 +58,7 @@ async function open(viewport) {
   if (await page.locator('.st-chat-stat').count() !== 1) throw new Error('only Strength should be visible after the first causal reveal')
   await page.screenshot({ path: `${evidence}platform-layout-opening-decision-390x844.png`, fullPage: true })
   await page.getByRole('button', { name: /叫住换脸的路人/ }).click()
-  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor({ timeout: 8_000 })
+  await readResult(page)
   await page.getByRole('button', { name: /查看下一步选择/ }).click()
   const openingPager = page.locator('.ct-stage__caption-page')
   if (await openingPager.count()) {
@@ -67,7 +75,7 @@ async function open(viewport) {
   const { context, page } = await open({ width: 320, height: 568 })
   await page.getByRole('button', { name: /碰一下停在半空的雨/ }).click()
   await page.waitForSelector('.ct-stage')
-  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor()
+  await readResult(page)
   if (await page.locator('.st-composer').count()) throw new Error('narrow Composer appeared before opening result acknowledgement')
   await page.screenshot({ path: `${evidence}platform-layout-first-result-320x568.png`, fullPage: true })
   await page.getByRole('button', { name: /查看下一步选择/ }).click()

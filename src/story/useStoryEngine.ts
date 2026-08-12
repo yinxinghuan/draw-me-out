@@ -13,7 +13,7 @@ import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
 import { resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
 import { buildEndingSnapshot, normalizeFacts } from './engine/endingDirector'
-import { normalizeCampaignState, resolveCampaignAction } from './engine/campaignDirector'
+import { campaignReturnChoices, campaignReturnContext, normalizeCampaignState, resolveCampaignAction } from './engine/campaignDirector'
 import { generateStoryEnding } from './engine/endingAdapter'
 import { t } from './i18n'
 import { ITEM_IMAGE_STYLE_VERSION, PLAYER_IMAGE_REFERENCE_VERSION, type AdapterProgress, type InventoryItem, type Locale, type StoryArchive, type StoryCartridge, type StoryMediaDirector, type StoryMode, type StorySave } from './types'
@@ -154,6 +154,11 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
     danger: normalizeDangerState(repaired.danger),
     campaign: normalizeCampaignState({ inventory, facts: normalizeFacts(repaired.facts, cartridge.initialFacts), map }, repaired.campaign),
   } as StorySave
+  if (cartridge.id === 'draw-me-out' && normalized.campaign.phase === 'return' && normalized.campaign.currentEpisode) {
+    normalized.choices = campaignReturnChoices(cartridge.locale).map((label, index) => ({ id: `campaign-return-${normalized.scene}-${index}`, label }))
+    normalized.decisionContext = campaignReturnContext(cartridge.locale)
+    normalized.objective = cartridge.locale === 'zh' ? '先带着新线索回到画外之地' : 'Return Outside the Pictures with the new Home Clue first'
+  }
   if (!normalized.sessionEnded && normalized.choices.length < 2) normalized.choices = createRecoveryChoices(normalized, cartridge)
   const undoKey = normalized.inventory.find((item) => item.id === 'undo-key')
   if (undoKey && undoKey.count > 0) undoKey.count = 1

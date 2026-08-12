@@ -75,6 +75,8 @@ export interface StoryCampaignState {
   phase: CampaignPhase
   currentEpisode?: CampaignEpisodeId
   completedEpisodes: CampaignEpisodeId[]
+  lastCompletedEpisode?: CampaignEpisodeId
+  hubReturnCount: number
   episodeTurn: number
   checkpoint: string
 }

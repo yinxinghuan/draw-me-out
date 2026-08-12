@@ -88,7 +88,9 @@ const routes = [
     entry: /贴标签的博物馆/,
     steps: [/挡住飞向梁叔的标签/, /让梁叔描述真正的你/, /请梁叔保留一块空说明牌/],
     entryShot: '03-museum-entry-platform-layout-390x844.png',
-    endShot: '04-museum-return-platform-layout-390x844.png',
+    clueShot: '04-museum-clue-platform-layout-390x844.png',
+    returnShot: '05-boundless-return-platform-layout-390x844.png',
+    hubShot: '05-boundless-hub-decision-platform-layout-390x844.png',
   },
   {
     entry: /会飞走的城市/,
@@ -97,7 +99,9 @@ const routes = [
   {
     entry: /说话成真的王国/,
     steps: [/让国王先停在沉默里/, /把加冕词改成一个问题/, /让全城练习一句沉默/],
-    endShot: '05-four-clues-platform-layout-390x844.png',
+    clueShot: '06-fourth-clue-platform-layout-390x844.png',
+    returnShot: '07-four-anchors-platform-layout-390x844.png',
+    hubShot: '07-four-anchors-decision-platform-layout-390x844.png',
   },
 ]
 
@@ -110,9 +114,18 @@ for (let index = 0; index < routes.length; index += 1) {
   }
   await choose(route.entry, route.entryShot)
   for (const step of route.steps) await choose(step)
-  if (route.endShot) await page.screenshot({ path: `${evidence}${route.endShot.replace('390x844', viewportTag)}`, fullPage: true })
+  if (route.clueShot) await page.screenshot({ path: `${evidence}${route.clueShot.replace('390x844', viewportTag)}`, fullPage: true })
+  const beforeReturn = await readWorld()
+  if (beforeReturn.campaign.phase !== 'return' || !beforeReturn.campaign.currentEpisode) throw new Error(`world ${index + 1} did not stop at the explicit return gate`)
+  if (beforeReturn.map.find((node) => node.current)?.id === 'latent-zero') throw new Error(`world ${index + 1} moved to the hub before the player returned`)
+  if (beforeReturn.choices.some((choice) => /走进|入口$/.test(choice.label))) throw new Error(`next-world choice leaked before the Boundless return: ${beforeReturn.choices.map((choice) => choice.label).join(' / ')}`)
+  await choose(/跟着小残穿回画外之地/, route.returnShot)
   const beforeReload = await readWorld()
   if (beforeReload.facts['home-clue-count'] !== index + 1) throw new Error(`clue count drift after route ${index + 1}`)
+  if (beforeReload.map.find((node) => node.current)?.id !== 'latent-zero') throw new Error(`route ${index + 1} did not arrive at the Boundless transit station`)
+  if (beforeReload.campaign.hubReturnCount !== index + 1) throw new Error(`return anchor count drift after route ${index + 1}`)
+  if (!/红线环/.test(beforeReload.decisionContext)) throw new Error(`route ${index + 1} lacks the persistent Boundless visual anchor context`)
+  if (route.hubShot) await page.screenshot({ path: `${evidence}${route.hubShot.replace('390x844', viewportTag)}`, fullPage: true })
   if (routes[index + 1] && !beforeReload.choices.some((choice) => routes[index + 1].entry.test(choice.label))) {
     throw new Error(`next route missing before reload: ${beforeReload.choices.map((choice) => choice.label).join(' / ')}`)
   }
@@ -140,25 +153,31 @@ await page.waitForFunction(() => {
   }
   return false
 }, { timeout: 8_000 })
-await page.screenshot({ path: `${evidence}06-finale-ready-platform-layout-${viewportTag}.png`, fullPage: true })
+await page.screenshot({ path: `${evidence}08-finale-ready-platform-layout-${viewportTag}.png`, fullPage: true })
 
 const world = await readWorld()
 if (world.version !== 8) throw new Error(`expected save v8, got ${world.version}`)
 if (world.facts['home-clue-count'] !== 4 || world.facts['coordinates-four'] !== true) throw new Error('four clue campaign did not complete')
 if (new Set(world.inventory.filter((item) => item.id.startsWith('coordinate-')).map((item) => item.id)).size !== 4) throw new Error('clue ids are missing or duplicated')
 if (world.campaign.completedEpisodes.length !== 4 || world.campaign.currentEpisode) throw new Error('campaign checkpoint did not return to the hub')
+if (world.campaign.hubReturnCount !== 4) throw new Error('not every picture world passed through the Boundless transit station')
 if (world.blocks.some((block) => block.kind === 'check')) throw new Error('governed campaign turns received an independent danger check')
 if (world.finale.status !== 'ready' || !world.sessionEnded) throw new Error('finale gate did not become ready')
 if (!world.characters.some((character) => character.id === 'default-seven' && character.status === 'known')) throw new Error('Default Seven was not visibly introduced before the finale')
 
 const snapshots = world.blocks.filter((block) => block.kind === 'image' && block.data?.visualSnapshot)
-if (snapshots.length !== 23) throw new Error(`expected 23 authoritative story frames, got ${snapshots.length}`)
+if (snapshots.length !== 27) throw new Error(`expected 27 authoritative story frames, got ${snapshots.length}`)
 for (const block of snapshots) {
   const snapshot = JSON.parse(block.data.visualSnapshot)
   if (!snapshot.locationId || !snapshot.action || !snapshot.result || !snapshot.avoid?.length) throw new Error(`incomplete visual snapshot on ${block.id}`)
   if (!['unfinished-rain-city', 'latent-zero'].includes(snapshot.locationId) && !snapshot.avoid.includes('montage')) throw new Error(`campaign snapshot lacks montage guard on ${block.id}`)
   const prompt = String(block.data.prompt || '')
   if (!prompt.includes('AUTHORITATIVE SCENE SNAPSHOT') || !prompt.includes(snapshot.locationId.replaceAll('-', ' '))) throw new Error(`prompt is not derived from snapshot on ${block.id}`)
+}
+const returnSnapshots = snapshots.map((block) => JSON.parse(block.data.visualSnapshot)).filter((snapshot) => snapshot.shot === 'return' && snapshot.locationId === 'latent-zero')
+if (returnSnapshots.length !== 4) throw new Error(`expected four explicit Boundless returns, got ${returnSnapshots.length}`)
+if (returnSnapshots.some((snapshot) => !snapshot.props.includes('one thin central red-filament transit ring') || !snapshot.continuity.some((rule) => rule.includes('same frontal camera')))) {
+  throw new Error('a Boundless return lost the fixed transit composition')
 }
 
 const bodyText = await page.locator('body').innerText()

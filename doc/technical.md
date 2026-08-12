@@ -50,7 +50,9 @@
 
 世界状态包括三项数值、自定义事实、地图、行囊、固定/生成角色、队伍 ID、关系事件、危险周期、图片块和结局快照。角色 ID、物品 ID 与地图节点跨语言共用；中英文仅改变可见文案。
 
-关键剧情分成两层：入口与通用世界规则继续由 `drawMeOut.ts` 的 `domainRules` 声明；四世界主线则由 `campaignDirector.ts` 根据 `campaign.activeEpisode / phase / completedEpisodes` 裁判。每个世界固定经历“进入并看见矛盾 → 检查具体问题 → 选择解法 → 承担结果并取得唯一线索”四个有效决定，但允许三种方法和自由文本进入同一稳定阶段。任一受管行动都把双语正文、数值/事实/地图/物品效果、视觉节拍和合法后续选择一次提交，完全不调用模型，也不叠加独立危险事件。模型遗漏命令、重复奖励或把后果写轻，都不能改写主线权威状态。
+关键剧情分成两层：入口与通用世界规则继续由 `drawMeOut.ts` 的 `domainRules` 声明；四世界主线则由 `campaignDirector.ts` 根据 `campaign.currentEpisode / phase / completedEpisodes` 裁判。每个世界固定经历“进入并看见矛盾 → 检查具体问题 → 选择解法 → 在原世界取得唯一线索 → 主动返回画外之地 → 确认锚位后再选门”。`resolution` 只提交线索与原世界线索镜，并把阶段切到 `return`；`return` 再原子提交 `latent-zero` 地图、返回次数、固定中转镜和下一组入口，因此世界之间不存在直接跳切。任一受管行动都把双语正文、数值/事实/地图/物品效果、视觉节拍和合法后续选择一次提交，完全不调用模型，也不叠加独立危险事件。模型遗漏命令、重复奖励或把后果写轻，都不能改写主线权威状态。
+
+`campaign.hubReturnCount` 记录已经在中转站可见确认的线索数，`lastCompletedEpisode` 记录最近离开的世界。旧存档若已经有线索但没有这两个字段，会在仍停留 hub/旧 return 状态时回退到一次安全的 `return` 阶段：保留物品、事实和篇章完成度，只补演最近一次画外之地落位镜；已经进入终局调查或正在未完成世界中的存档不倒退。
 
 四条线索齐全后，战役导演依次揭示“默认七号/抹平者来源”和“出口会抹除仍在生长的世界”两项事实，玩家确认后才把 `finale.status` 置为 `ready` 并冻结结局入口。这个闸门替代了“场景数够了就自动结束”的脆弱推断。完整机械测试在每个回合后序列化并重新加载存档，确保跨刷新仍能从唯一阶段继续。
 
@@ -94,7 +96,7 @@
 
 ## 4. 扩展点
 
-- 调整四世界主线顺序、每阶段选择、结果、线索或终局闸门：编辑 `src/story/engine/campaignDirector.ts`，并运行 `npm run test:campaign-director` 与 `_qa/playthrough.mjs`（Playwright 需要 Node.js 20+）。
+- 调整四世界主线顺序、每阶段选择、结果、线索、中转站锚位或终局闸门：编辑 `src/story/engine/campaignDirector.ts`；保持 `resolution → return → hub/finale` 三段状态合同，并运行 `npm run test:campaign-director` 与 `_qa/playthrough.mjs`（Playwright 需要 Node.js 20+）。
 - 调整通用世界规则、三项数值、危险频率、章节和结局能力：编辑 `src/story/cartridges/drawMeOut.ts`。
 - 调整入口动作、方法代价、稀缺资源、路线锁、一次性奖励、撤销代价或派生里程碑：优先编辑 `drawMeOut.ts` 的 `domainRules`，保持中英文 stable id 相同，并运行 `npm run test:opening`、`npm run test:domain`、`npm run test:campaign` 与浏览器脚本；只有 schema 无法表达新机制时才改 `engine/domainRules.ts`。
 - 增加或改写本地试玩分支：编辑 `src/story/cartridges/drawMeOutCampaign.ts`；每个选择标签应能匹配唯一后续结果。

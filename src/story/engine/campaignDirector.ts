@@ -40,6 +40,10 @@ const clueIds: Record<CampaignEpisodeId, CampaignEpisode['clueId']> = {
   'label-museum': 'coordinate-remembered',
 }
 
+const clueEpisodeIds = Object.fromEntries(
+  (Object.entries(clueIds) as Array<[CampaignEpisodeId, CampaignEpisode['clueId']]>).map(([episodeId, clueId]) => [clueId, episodeId]),
+) as Record<CampaignEpisode['clueId'], CampaignEpisodeId>
+
 const mapEpisodeIds: Record<string, CampaignEpisodeId> = {
   'flying-city-rope-street': 'flying-city',
   'words-kingdom-palace': 'words-kingdom',
@@ -268,27 +272,49 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
 }
 
 export function createInitialCampaignState(): StoryCampaignState {
-  return { act: 'prologue', phase: 'locked', completedEpisodes: [], episodeTurn: 0, checkpoint: 'rain-city' }
+  return { act: 'prologue', phase: 'locked', completedEpisodes: [], hubReturnCount: 0, episodeTurn: 0, checkpoint: 'rain-city' }
 }
 
 export function normalizeCampaignState(save: Pick<StorySave, 'inventory' | 'facts' | 'map'>, candidate?: Partial<StoryCampaignState>): StoryCampaignState {
-  const completedEpisodes = (Object.keys(clueIds) as CampaignEpisodeId[]).filter((id) => save.inventory.some((item) => item.id === clueIds[id] && item.count > 0))
+  const inventoryEpisodes = save.inventory
+    .filter((item) => item.count > 0 && item.id in clueEpisodeIds)
+    .map((item) => clueEpisodeIds[item.id as CampaignEpisode['clueId']])
+  const completedSet = new Set(inventoryEpisodes)
+  const candidateOrder = (candidate?.completedEpisodes ?? []).filter((id) => completedSet.has(id))
+  const completedEpisodes = [...new Set([...candidateOrder, ...inventoryEpisodes])]
   const currentNode = save.map.find((node) => node.current)?.id ?? ''
   const inferredEpisode = mapEpisodeIds[currentNode]
   const metGuide = save.facts['residual-met'] === true
-  const currentEpisode = candidate?.currentEpisode && !completedEpisodes.includes(candidate.currentEpisode)
+  const activeEpisode = candidate?.currentEpisode && !completedEpisodes.includes(candidate.currentEpisode)
     ? candidate.currentEpisode
     : inferredEpisode && !completedEpisodes.includes(inferredEpisode) ? inferredEpisode : undefined
-  const phase = candidate?.phase && candidate.phase !== 'locked'
-    ? currentEpisode || candidate.phase === 'hub' || candidate.phase === 'finale' ? candidate.phase : metGuide ? 'hub' : 'locked'
-    : currentEpisode ? 'problem' : metGuide ? 'hub' : 'locked'
+  const inventoryLastCompleted = [...save.inventory].reverse().find((item) => item.count > 0 && item.id in clueEpisodeIds)
+  const lastCompletedEpisode = candidate?.lastCompletedEpisode && completedEpisodes.includes(candidate.lastCompletedEpisode)
+    ? candidate.lastCompletedEpisode
+    : inventoryLastCompleted ? clueEpisodeIds[inventoryLastCompleted.id as CampaignEpisode['clueId']] : completedEpisodes.at(-1)
+  const finaleProgressed = save.facts['optimizer-core-open'] === true || save.facts['exit-cost-known'] === true
+  const explicitReturnCount = Number(candidate?.hubReturnCount)
+  const hubReturnCount = Number.isFinite(explicitReturnCount)
+    ? Math.max(0, Math.min(completedEpisodes.length, explicitReturnCount))
+    : !activeEpisode && !finaleProgressed && completedEpisodes.length > 0 && (candidate?.phase === 'hub' || candidate?.phase === 'return')
+      ? completedEpisodes.length - 1
+      : completedEpisodes.length
+  const needsHubReturn = Boolean(lastCompletedEpisode) && !activeEpisode && !finaleProgressed && hubReturnCount < completedEpisodes.length
+  const phase = activeEpisode
+    ? candidate?.phase === 'entry' || candidate?.phase === 'problem' || candidate?.phase === 'resolution' ? candidate.phase : 'problem'
+    : candidate?.phase === 'finale' || finaleProgressed ? 'finale'
+      : needsHubReturn ? 'return'
+        : metGuide ? 'hub' : 'locked'
+  const currentEpisode = phase === 'return' ? lastCompletedEpisode : activeEpisode
   return {
     act: candidate?.act ?? (metGuide ? 'worlds' : 'prologue'),
     phase,
     currentEpisode,
     completedEpisodes,
-    episodeTurn: Math.max(0, Number(candidate?.episodeTurn ?? (currentEpisode ? 2 : 0))),
-    checkpoint: String(candidate?.checkpoint ?? (currentEpisode ? `${currentEpisode}:${phase}` : metGuide ? 'boundless-hub' : 'rain-city')),
+    lastCompletedEpisode,
+    hubReturnCount,
+    episodeTurn: Math.max(0, Number(candidate?.episodeTurn ?? (activeEpisode ? 2 : 0))),
+    checkpoint: String(needsHubReturn ? `${lastCompletedEpisode}:return` : candidate?.checkpoint ?? (currentEpisode ? `${currentEpisode}:${phase}` : metGuide ? 'boundless-hub' : 'rain-city')),
   }
 }
 
@@ -304,6 +330,56 @@ function hubChoices(locale: Locale, completed: CampaignEpisodeId[]): [string, st
     ? ['检查已经带回的线索', '问小残下一扇门', '观察无边处的新变化']
     : ['Inspect the Home Clues', 'Ask Little Remnant about the next door', 'Observe changes in the Boundless']
   return [...remaining, ...fallback].slice(0, 3) as [string, string, string]
+}
+
+export function campaignReturnChoices(locale: Locale): [string, string, string] {
+  return locale === 'zh'
+    ? ['跟着小残穿回画外之地', '握住线索，让它带路回去', '回头看这个世界留下什么痕迹']
+    : ['Follow Little Remnant back Outside the Pictures', 'Let the Home Clue guide the way back', 'Look back at the trace this world leaves']
+}
+
+export function campaignReturnContext(locale: Locale): string {
+  return locale === 'zh'
+    ? '线索已经到手。下一扇门尚未出现；先和小残回画外之地，让线索落进固定锚位。'
+    : 'The Home Clue is yours, but no next door has appeared. Return Outside the Pictures with Little Remnant and settle the clue into its fixed transit anchor.'
+}
+
+function hubAnchorProps(completed: CampaignEpisodeId[], latest: CampaignEpisodeId): string[] {
+  const status = (episodeId: CampaignEpisodeId, filled: string, empty: string) => completed.includes(episodeId)
+    ? `${filled}${episodeId === latest ? ', newly returned and brightest' : ', already secured at low steady brightness'}`
+    : `${empty}, dim empty outline only`
+  return [
+    'one thin central red-filament transit ring',
+    status('flying-city', 'upper-left cobalt weight anchor', 'upper-left weight anchor'),
+    status('words-kingdom', 'upper-right transparent blank-center anchor', 'upper-right blank-center anchor'),
+    status('endless-meeting', 'lower-right warm-gray leaving anchor', 'lower-right leaving anchor'),
+    status('label-museum', 'lower-left fingerprint-silver remembered anchor', 'lower-left remembered anchor'),
+  ]
+}
+
+function hubReturnVisual(locale: Locale, episode: CampaignEpisode, completed: CampaignEpisodeId[], action: string, result: string): StoryVisualBeat {
+  return {
+    locationId: 'latent-zero',
+    location: locale === 'zh' ? '画外之地 · 无边处' : 'Outside the Pictures · The Boundless',
+    episodeId: episode.id,
+    phase: 'return',
+    shot: 'return',
+    action: `${action}; SUBJECT A and Little Remnant cross fully out of ${episode.title}; the new clue settles into its fixed anchor before any next doorway appears`,
+    result,
+    subjects: ['SUBJECT A', 'Little Remnant'],
+    props: [...hubAnchorProps(completed, episode.id), episode.visualReturnTrace],
+    environment: 'the same fixed transit composition on every return: vast matte near-black non-space, a thin red-filament ring centered in frame, four anchor positions forming an unmoving diamond around it, no floor, horizon, architecture or readable distance',
+    lighting: 'controlled soft edge light; the newly filled anchor is brightest, older filled anchors remain dim and steady, unfinished anchors are outline-only',
+    continuity: [
+      'use the same frontal camera, central red-filament ring, diamond layout and scale on every return to the Boundless',
+      'upper-left is always cobalt weight, upper-right always transparent blank, lower-right always warm-gray leaving, lower-left always fingerprint-silver remembered',
+      'preserve Little Remnant as a tiny incomplete white paper-bird form with one red filament tail',
+      'show only one residue from the world just left; all other world architecture, weather and people stop at the closing crack',
+    ],
+    avoid: ['ordinary room', 'ground plane', 'horizon', 'architecture from the departed world', 'people from the departed world', 'readable labels or writing', 'montage', 'split screen', 'cover-art composition'],
+    playerVisible: true,
+    refresh: true,
+  }
 }
 
 function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], action: string, result: string, visualAction: string, playerVisible: boolean): StoryVisualBeat {
@@ -472,13 +548,9 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
     const completed = [...new Set([...campaign.completedEpisodes, episode.id])]
     const result = episode.resolutionResults[index]
     const clue = clueItem(cartridge.locale, episode.clueId)
-    const allComplete = completed.length === 4
-    const objective = allComplete
-      ? (cartridge.locale === 'zh' ? '让四条线索拼出出口，并查清出口会带走谁' : 'Join the four Home Clues and learn whom the exit will take')
-      : (cartridge.locale === 'zh' ? `选择下一扇门；还缺 ${4 - completed.length} 条回家线索` : `Choose the next door; ${4 - completed.length} Home Clues remain`)
     const summary = cartridge.locale === 'zh'
-      ? `${result} 小残带你退回无边处；这里只留下${episode.returnTrace}。阶段已保存。`
-      : `${result} Little Remnant pulls you back to the Boundless, which keeps only ${episode.returnTrace}. Checkpoint saved.`
+      ? `${result} 入口边缘开始向内收拢。小残没有打开下一扇门，只把红线伸向画外之地：先把这条线索带回中转处。`
+      : `${result} The crack begins folding inward. Little Remnant opens no next door, extending its red filament back Outside the Pictures instead: this clue must return to the transit place first.`
     return accepted(
       `campaign-${episode.id}-complete-${index + 1}`,
       [
@@ -487,17 +559,57 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
         { type: 'inventory', action: 'add', itemId: episode.clueId, count: 1, item: clue },
         { type: 'fact', id: episode.clueFact, value: true },
         { type: 'fact-add', id: 'saved-world-count', delta: 1 },
-        { type: 'campaign', patch: { phase: allComplete ? 'return' : 'hub', currentEpisode: undefined, completedEpisodes: completed, episodeTurn: 0, checkpoint: allComplete ? 'four-clues-return' : 'boundless-hub' } },
-        { type: 'map', nodeId: 'latent-zero' },
-        { type: 'clock', value: cartridge.locale === 'zh' ? `没有时间 · 第 ${completed.length + 1} 次返回` : `No time · Return ${completed.length + 1}` },
-        { type: 'objective', value: objective },
+        { type: 'campaign', patch: { phase: 'return', currentEpisode: episode.id, lastCompletedEpisode: episode.id, completedEpisodes: completed, episodeTurn: 0, checkpoint: `${episode.id}:return` } },
+        { type: 'objective', value: cartridge.locale === 'zh' ? '先带着新线索回到画外之地' : 'Return Outside the Pictures with the new Home Clue first' },
         ...(completed.length >= 3 ? [{ type: 'fact', id: 'saved-worlds-three', value: true } as DomainEffect] : []),
       ],
       summary,
+      campaignReturnChoices(cartridge.locale),
+      visualBeat(episode, 'clue', action, summary, `SUBJECT A receives ${episode.visualReturnTrace} while the solved world visibly stabilizes and the exit crack begins to close`, true),
+      campaignReturnContext(cartridge.locale),
+    )
+  }
+
+  if (campaign.phase === 'return' && campaign.currentEpisode) {
+    const completed = campaign.completedEpisodes
+    const allComplete = completed.length === 4
+    const index = choiceIndex(action, campaignReturnChoices(cartridge.locale))
+    const approaches = cartridge.locale === 'zh'
+      ? [
+          '你跟着小残的红线穿过收拢的裂缝，先回到画外之地。',
+          '你握紧新线索；它向无边的黑暗里一沉，把你和小残一起带回画外之地。',
+          `你最后看了一眼${episode.title}，只让它留下一道痕迹，随后和小残退回画外之地。`,
+        ]
+      : [
+          'You follow Little Remnant’s red filament through the closing crack and return Outside the Pictures first.',
+          'You hold the new Home Clue; it sinks into the boundless dark and draws you and Little Remnant back Outside the Pictures.',
+          `You look back once at ${episode.title}, allowing it to leave only one trace before returning Outside the Pictures with Little Remnant.`,
+        ]
+    const text = cartridge.locale === 'zh'
+      ? `${approaches[index]}中央那圈红线仍在原处，四个锚位也没有移动。第 ${completed.length} 条线索落进自己的固定位置；刚离开的入口收拢成${episode.returnTrace}。${allComplete ? '四个锚位同时亮起，拼出口之前还要先查清白痕与代价。' : `剩下 ${4 - completed.length} 个入口这才围着中转环重新亮起。`}阶段已保存。`
+      : `${approaches[index]} The central red-filament ring remains exactly where it was, and none of the four anchors has moved. Home Clue ${completed.length} settles into its fixed position; the closing entrance leaves ${episode.returnTrace}. ${allComplete ? 'All four anchors light together; the white trace and the cost still need to be understood before forming the exit.' : `${4 - completed.length} entrances now relight around the transit ring.`} Checkpoint saved.`
+    const objective = allComplete
+      ? (cartridge.locale === 'zh' ? '让四条线索拼出出口，并查清出口会带走谁' : 'Join the four Home Clues and learn whom the exit will take')
+      : (cartridge.locale === 'zh' ? `从画外之地选择下一扇门；还缺 ${4 - completed.length} 条回家线索` : `Choose the next door from Outside the Pictures; ${4 - completed.length} Home Clues remain`)
+    const context = cartridge.locale === 'zh'
+      ? allComplete
+        ? '已回到画外之地。四条线索都已落进红线环，出口尚未打开。'
+        : `已回到画外之地。第 ${completed.length} 条线索落进红线环；还有 ${4 - completed.length} 个入口重新亮起。`
+      : `You and Little Remnant are back inside the red-filament ring Outside the Pictures. Home Clue ${completed.length} is anchored; ${allComplete ? 'all four anchors are lit, but the exit is not yet open.' : `${4 - completed.length} entrances remain around the transit station.`}`
+    return accepted(
+      `campaign-return-${episode.id}-${index + 1}`,
+      [
+        { type: 'campaign', patch: { act: allComplete ? 'finale' : 'worlds', phase: allComplete ? 'finale' : 'hub', currentEpisode: undefined, lastCompletedEpisode: episode.id, hubReturnCount: completed.length, episodeTurn: 0, checkpoint: allComplete ? 'four-clues-hub' : 'boundless-hub' } },
+        { type: 'map', nodeId: 'latent-zero' },
+        { type: 'clock', value: cartridge.locale === 'zh' ? `没有时间 · 第 ${completed.length} 次返回` : `No time · Return ${completed.length}` },
+        { type: 'objective', value: objective },
+      ],
+      text,
       allComplete
         ? (cartridge.locale === 'zh' ? ['让四条线索拼出出口', '先确认出口的代价', '寻找抹平者留下的白痕'] : ['Join the four clues into an exit', 'Learn the exit cost first', 'Follow the Smoother’s white trace'])
         : hubChoices(cartridge.locale, completed),
-      visualBeat(episode, 'return', action, summary, `SUBJECT A and Little Remnant return carrying ${episode.visualReturnTrace}`, true),
+      hubReturnVisual(cartridge.locale, episode, completed, action, text),
+      context,
     )
   }
   return undefined

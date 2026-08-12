@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { drawMeOut } from '../src/story/cartridges/drawMeOut'
-import { resolveCampaignAction } from '../src/story/engine/campaignDirector'
+import { normalizeCampaignState, resolveCampaignAction } from '../src/story/engine/campaignDirector'
 import { resolveDomainAction } from '../src/story/engine/domainRules'
 import { applyParsedScene, createInitialSave, enterStory } from '../src/story/engine/reducer'
 import type { StorySave } from '../src/story/types'
@@ -45,11 +45,37 @@ order.forEach((entry, episodeIndex) => {
   act(save.choices[(episodeIndex + 1) % 3].label)
   assert.equal(save.campaign.phase, 'resolution')
   act(save.choices[(episodeIndex + 2) % 3].label)
-  assert.equal(save.scene - sceneBefore, 4)
-  assert.equal(save.campaign.phase, 'hub')
+  assert.equal(save.campaign.phase, 'return')
+  assert.equal(save.campaign.currentEpisode, save.campaign.lastCompletedEpisode)
+  assert.notEqual(save.map.find((node) => node.current)?.id, 'latent-zero')
+  assert.match(save.decisionContext, /回(?:到)?画外之地|return outside the pictures/i)
+  assert.equal(save.choices.some((choice) => /走进|enter the/i.test(choice.label)), false)
+  const clueSnapshot = JSON.parse(String(save.blocks.find((block) => block.id === `image-${save.scene}`)?.data?.visualSnapshot)) as { locationId: string; shot: string }
+  assert.equal(clueSnapshot.shot, 'clue')
+  assert.notEqual(clueSnapshot.locationId, 'latent-zero')
+  act(save.choices[episodeIndex % 3].label)
+  assert.equal(save.scene - sceneBefore, 5)
+  assert.equal(save.campaign.phase, episodeIndex === order.length - 1 ? 'finale' : 'hub')
   assert.equal(save.campaign.currentEpisode, undefined)
+  assert.equal(save.campaign.hubReturnCount, episodeIndex + 1)
+  assert.equal(save.map.find((node) => node.current)?.id, 'latent-zero')
+  assert.match(save.decisionContext, /红线环|red-filament ring/i)
+  const returnSnapshot = JSON.parse(String(save.blocks.find((block) => block.id === `image-${save.scene}`)?.data?.visualSnapshot)) as { locationId: string; shot: string; props: string[]; continuity: string[] }
+  assert.equal(returnSnapshot.locationId, 'latent-zero')
+  assert.equal(returnSnapshot.shot, 'return')
+  assert(returnSnapshot.props.includes('one thin central red-filament transit ring'))
+  assert(returnSnapshot.continuity.some((rule) => rule.includes('same frontal camera')))
   assert.equal(save.facts['home-clue-count'], episodeIndex + 1)
   assert.equal(save.campaign.completedEpisodes.length, episodeIndex + 1)
+  if (episodeIndex === 0) {
+    const legacyCampaign: Partial<StorySave['campaign']> = { ...save.campaign, phase: 'hub' }
+    delete legacyCampaign.hubReturnCount
+    delete legacyCampaign.lastCompletedEpisode
+    const migrated = normalizeCampaignState(save, legacyCampaign)
+    assert.equal(migrated.phase, 'return')
+    assert.equal(migrated.currentEpisode, 'label-museum')
+    assert.equal(migrated.hubReturnCount, 0)
+  }
 })
 
 assert.deepEqual(save.inventory.filter((item) => item.id.startsWith('coordinate-')).map((item) => item.id).sort(), [
@@ -74,9 +100,10 @@ assert(save.characters.some((character) => character.id === 'default-seven' && c
 const snapshots = save.blocks
   .filter((block) => block.kind === 'image' && block.data?.visualSnapshot)
   .map((block) => JSON.parse(String(block.data?.visualSnapshot)) as { locationId: string; shot: string; avoid: string[] })
-assert.equal(snapshots.length, 23)
+assert.equal(snapshots.length, 27)
 assert.equal(snapshots.every((snapshot) => snapshot.locationId && snapshot.shot && snapshot.avoid.length > 0), true)
 assert.equal(snapshots.filter((snapshot) => !['unfinished-rain-city', 'latent-zero'].includes(snapshot.locationId)).every((snapshot) => snapshot.avoid.includes('montage')), true)
+assert.equal(snapshots.filter((snapshot) => snapshot.shot === 'return' && snapshot.locationId === 'latent-zero').length, 4)
 
 console.log(JSON.stringify({
   ok: true,
