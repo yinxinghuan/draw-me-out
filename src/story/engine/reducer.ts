@@ -15,6 +15,7 @@ export function createInitialSave(cartridge: StoryCartridge, remoteChatId?: stri
   const initial: StorySave = {
     version: 8, cartridgeId: cartridge.id, locale: cartridge.locale, remoteChatId, entered: false, scene: 0,
     location: cartridge.opening.location, time: cartridge.opening.time, objective: cartridge.opening.objective,
+    decisionContext: cartridge.opening.objective,
     stats: Object.fromEntries(cartridge.statDefinitions.map((stat) => [stat.id, stat.initial])),
     blocks: [...cartridge.opening.blocks, createImageBlock('image-0', cartridge.opening.location, cartridge.opening.imagePrompt, 'idle', '', {
       source: 'opening', reason: 'opening-crisis', promptVersion: String(SCENE_IMAGE_PROMPT_VERSION), playerVisible: 'true',
@@ -375,6 +376,12 @@ export function applyParsedScene(
     danger: normalizeDangerState(save.danger),
     sessionEnded: false, finale: save.finale.status === 'complete' ? save.finale : { status: 'idle' }, lastActionId: actionId,
   }
+  const visibleTurnText = parsed.blocks
+    .filter((block) => block.kind === 'narration' || block.kind === 'dialogue')
+    .map((block) => block.text.trim())
+    .filter(Boolean)
+    .join(' ')
+  if (!domainResolution && visibleTurnText) next.decisionContext = shortChoiceContext(visibleTurnText, cartridge.locale === 'zh' ? 41 : 150)
   const effects: StoryBlock[] = []
   const confirmedFacts: Array<{ id: string; value: string }> = []
   let dangerCheckAdded = false

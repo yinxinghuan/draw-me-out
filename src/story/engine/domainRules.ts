@@ -10,6 +10,12 @@ function normalized(value: string): string {
   return value.trim().toLocaleLowerCase().replace(/[\s，。！？、,.!?;；：:"“”'‘’()（）]+/g, '')
 }
 
+function shortDecisionContext(value: string, locale: StoryCartridge['locale']): string {
+  const clean = value.replace(/\s+/g, ' ').trim()
+  const max = locale === 'zh' ? 41 : 150
+  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trim()}…`
+}
+
 function matchStrength(source: string, keyword: string): number {
   if (source.includes(keyword)) return 200 + keyword.length
   if (!/[\u3400-\u9fff]/.test(keyword)) return 0
@@ -81,7 +87,21 @@ export function resolveDomainAction(save: StorySave, cartridge: StoryCartridge, 
     reasons,
     successText: candidate.rule.successText,
     successChoices: choices,
+    decisionContext: candidate.rule.decisionContext,
+    visualBeat: candidate.rule.visualBeat,
   }
+}
+
+export function domainVisualBeatForAction(cartridge: StoryCartridge, action: string) {
+  const source = normalized(action)
+  if (!source) return undefined
+  return cartridge.domainRules?.rules
+    .map((rule, index) => {
+      const matches = rule.match.map(normalized).map((keyword) => matchStrength(source, keyword)).filter(Boolean)
+      return matches.length ? { rule, index, score: matches.length * 1000 + Math.max(...matches) } : null
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.rule.visualBeat
 }
 
 export function domainAllowsModelCommand(command: ParsedCommand, resolution?: DomainActionResolution): boolean {
@@ -143,6 +163,7 @@ export function applyDomainResolution(save: StorySave, cartridge: StoryCartridge
   if (!resolution) return []
   save.choices = resolution.successChoices.map((label, index) => ({ id: `domain-${save.scene}-${index}`, label }))
   if (resolution.status === 'rejected') {
+    save.decisionContext = shortDecisionContext(resolution.reasons.join('；') || save.objective, cartridge.locale)
     return [{
       id: `domain-${save.scene}`, kind: 'event', text: resolution.reasons.join('；'),
       data: { domainRule: resolution.ruleId, domainStatus: 'rejected' },
@@ -239,6 +260,7 @@ export function applyDomainResolution(save: StorySave, cartridge: StoryCartridge
     }
   })
   syncDomainDerivedState(save, cartridge)
+  save.decisionContext = shortDecisionContext(resolution.decisionContext ?? resolution.successText, cartridge.locale)
   blocks.push({ id: `domain-${save.scene}`, kind: 'narration', text: resolution.successText, data: { domainRule: resolution.ruleId, domainStatus: 'accepted' } })
   return blocks
 }

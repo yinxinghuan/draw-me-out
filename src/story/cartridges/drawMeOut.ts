@@ -1,6 +1,6 @@
 import type {
   DomainActionRule, DomainEffect, InventoryItem, Locale, StoryCartridge, StoryDangerDirector, StoryDomainRules, StoryEndingAnchor,
-  StoryEndingCapability, StoryEndingDirector, StoryImageDirector,
+  StoryEndingCapability, StoryEndingDirector, StoryImageDirector, StoryVisualBeat,
 } from '../types'
 import { buildDrawMeOutCampaign } from './drawMeOutCampaign'
 
@@ -10,6 +10,31 @@ const entryImage = new URL('../img/worlds/draw-me-out-entry.png', import.meta.ur
 function build(locale: Locale): StoryCartridge {
   const zh = locale === 'zh'
   const s = (cn: string, en: string) => zh ? cn : en
+  const openingBeat = (
+    phase: string, action: string, result: string, environment: string, props: string[],
+    options: { latent?: boolean; shot?: StoryVisualBeat['shot']; continuity?: string[] } = {},
+  ): StoryVisualBeat => ({
+    locationId: options.latent ? 'latent-zero' : 'unfinished-rain-city',
+    location: options.latent ? 'the unreadable outside of pictures' : 'the unfinished rainy city',
+    phase,
+    shot: options.shot ?? 'consequence',
+    action,
+    result,
+    subjects: ['SUBJECT A', ...(options.latent ? ['Little Remnant only when explicitly introduced'] : ['frozen anonymous rain-city passersby'])],
+    props,
+    environment,
+    lighting: options.latent
+      ? 'one controlled soft edge light in otherwise flat matte-black unreadable non-space'
+      : 'continuous cold rainy evening light, wet asphalt reflections and the same distant doorway',
+    continuity: options.continuity ?? (options.latent
+      ? ['SUBJECT A retains exact supplied identity and tumbles without a floor', 'the red filament remains the only directional relation']
+      : ['the same rainy street, suspended droplets, wet crossing and distant door remain visibly continuous', 'SUBJECT A retains exact supplied identity and clothing']),
+    avoid: options.latent
+      ? [...(phase === 'threshold-fall' ? [] : ['rainy street still presented as the current location']), 'floor', 'horizon', 'architecture', 'unintroduced human stranger', 'rabbit ears', 'superhero costume']
+      : ['matte-black latent void', 'empty black background', 'teleporting to another location', 'unintroduced fantasy person', 'rabbit ears'],
+    playerVisible: true,
+    refresh: true,
+  })
 
   const capabilities: StoryEndingCapability[] = [
     {
@@ -253,6 +278,8 @@ function build(locale: Locale): StoryCartridge {
         ],
         successText: c('你碰到玻璃般的雨滴，整条街同时停住；手臂随之一沉。改变画面会消耗余力。', 'You touch a glassy raindrop. The street freezes; changing the picture spends Strength.'),
         successChoices: [c('叫住换脸的路人', 'Call to the changing-face passerby'), c('摸一下街边的空白', 'Touch the blank at the street edge'), c('直接跑向那扇门', 'Run straight to the distant door')],
+        decisionContext: c('雨城仍在眼前：换脸路人、街边白边和远处那扇门，是你能检查的三处异常。', 'The Rain City remains in view: a changing passerby, the blank street edge, and the distant door are the three anomalies you can inspect.'),
+        visualBeat: openingBeat('rain-touch', 'SUBJECT A reaches into one glassy raindrop suspended at fingertip distance', 'every raindrop and passerby freezes in the same unfinished street', 'the unfinished rainy city remains fully visible from curb to distant doorway; this is still a street, not the outside of pictures', ['one suspended raindrop at SUBJECT A’s fingertips', 'wet zebra crossing', 'distant fixed door']),
       },
       {
         id: 'inspect-rain-passerby', intent: 'investigate-rain-city', match: ['叫住换脸的路人', 'Call to the changing-face passerby'],
@@ -260,6 +287,8 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'fact', id: 'rain-city-method', value: 'passerby' }, { type: 'fact', id: 'people-repeat', value: true }, { type: 'fact', id: 'trace-stat-revealed', value: true }, { type: 'stat', id: 'trace', delta: 6 }, { type: 'objective', value: c('在所有路人再次转头以前抵达那扇门', 'Reach the door before every passerby turns again') }],
         successText: c('你叫住最近的路人。他用三张不同的脸回答同一句话，随后整条街的人一起转头记住了你。“被发现”因此出现：画里有多少东西正在注意这个不属于画面的人。只有远处那扇门始终没有换位置。', 'You call to the nearest passerby. They answer one sentence with three different faces, and everyone in the street turns to remember you. Detected appears: it measures how much of the picture is noticing someone who does not belong. Only the distant door stays put.'),
         successChoices: [c('提醒路人街道正在消失', 'Warn them that the street is vanishing'), c('拿走门框上的发亮按键', 'Take the glowing key from the frame'), c('立刻跳进门后的颜色', 'Jump into the color beyond the door')],
+        decisionContext: c('换脸路人和整条街都已转头看你；只有远处的门没有换位置，门框上有一枚发亮按键。', 'The changing passerby and the whole street now watch you; only the distant door stays fixed, with one glowing key in its frame.'),
+        visualBeat: openingBeat('rain-passerby', 'SUBJECT A calls to the nearest passerby', 'one passerby cycles through three faces while the same street turns toward SUBJECT A', 'the unfinished rainy city remains intact and recognizable, with the distant door fixed in exactly the same position', ['three transient face impressions on one passerby', 'glowing key in the distant doorframe'], { shot: 'clue' }),
       },
       {
         id: 'inspect-rain-blank', intent: 'investigate-rain-city', match: ['摸一下街边的空白', 'Touch the blank at the street edge'],
@@ -267,6 +296,8 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'fact', id: 'rain-city-method', value: 'blank-edge' }, { type: 'fact', id: 'blank-edge-cold', value: true }, { type: 'fact', id: 'self-stat-revealed', value: true }, { type: 'stat', id: 'self', delta: -5 }, { type: 'objective', value: c('趁白边继续改写你以前抵达那扇门', 'Reach the door before the blank edge rewrites more of you') }],
         successText: c('你把手按进街边的空白。它没有温度，却想替你补上一只不属于你的手；你及时抽回，仍有一小段轮廓变淡。“我还是我”因此出现：它记录这幅画还剩多少机会把你认错。白边一直通向远处那扇门。', 'You press a hand into the blank edge. It has no temperature, yet tries to finish you with a hand that is not yours. You pull back as part of your outline fades. Still Me appears: it records how much room the picture has left to mistake you. The blank edge leads to the distant door.'),
         successChoices: [c('提醒路人街道正在消失', 'Warn them that the street is vanishing'), c('拿走门框上的发亮按键', 'Take the glowing key from the frame'), c('立刻跳进门后的颜色', 'Jump into the color beyond the door')],
+        decisionContext: c('你仍站在雨城街边；白边正沿路面通向远处的门，门框上有一枚发亮按键。', 'You are still at the Rain City curb; the blank edge runs along the street toward the distant door and its glowing key.'),
+        visualBeat: openingBeat('rain-blank-edge', 'SUBJECT A withdraws one hand from a bone-white unfinished edge at the curb', 'the false hand dissolves while the narrow white edge visibly continues along the rainy street to the distant door', 'the rainy street fills most of the frame; only one narrow unfinished white edge interrupts the curb and guides the eye to the same door', ['one narrow bone-white curb edge', 'fading wrong hand outline', 'glowing key in the distant doorframe'], { shot: 'clue' }),
       },
       {
         id: 'inspect-rain-door', intent: 'investigate-rain-city', match: ['直接跑向那扇门', 'Run straight to the distant door'],
@@ -274,6 +305,8 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'fact', id: 'rain-city-method', value: 'direct-door' }, { type: 'fact', id: 'trace-stat-revealed', value: true }, { type: 'stat', id: 'compute', delta: -3 }, { type: 'stat', id: 'trace', delta: 9 }, { type: 'objective', value: c('在脚下斑马线消失以前穿过那扇门', 'Cross before the street vanishes beneath you') }],
         successText: c('你不等路人回答，直接冲向门。重复的街道来不及把你送回原位，却让所有路人同时转头；“被发现”开始上升。门框之后没有房间，只有一团等待决定的颜色，脚下斑马线正一格格消失。', 'You run without waiting for an answer. The looping street cannot reset you in time, but every passerby turns at once and Detected begins to rise. There is no room beyond the frame, only a color waiting to be decided, while the crossing vanishes stripe by stripe.'),
         successChoices: [c('提醒路人街道正在消失', 'Warn them that the street is vanishing'), c('拿走门框上的发亮按键', 'Take the glowing key from the frame'), c('立刻跳进门后的颜色', 'Jump into the color beyond the door')],
+        decisionContext: c('你已冲到门前；斑马线正从身后消失，门框按键发亮，门后是不属于雨城的颜色。', 'You have reached the door; the crossing vanishes behind you, the frame key glows, and color beyond it does not belong to the Rain City.'),
+        visualBeat: openingBeat('rain-door', 'SUBJECT A runs toward and nearly reaches the fixed distant door', 'the zebra crossing vanishes stripe by stripe behind SUBJECT A as every passerby turns', 'the same unfinished rainy city compresses behind the doorway, still clearly visible and continuous', ['vanishing wet zebra stripes', 'glowing doorframe key', 'unnamed color visible only inside the doorway'], { shot: 'danger' }),
       },
       {
         id: 'acquire-undo-key-jump', intent: 'acquire-undo-key',
@@ -282,6 +315,8 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'inventory', action: 'add', itemId: 'undo-key', count: 1, item: undoKey }, { type: 'fact', id: 'undo-key-acquired', value: true }, { type: 'fact', id: 'self-stat-revealed', value: true }, { type: 'stat', id: 'self', delta: -6 }, { type: 'map', nodeId: 'latent-zero' }, { type: 'fact', id: 'latent-layer-found', value: true }, { type: 'clock', value: c('没有时间 · 第一次坠落', 'No time · First fall') }, { type: 'objective', value: c('沿红线找到深处那个会动的小东西', 'Follow the red filament toward the small moving thing') }],
         successText: c('你跳进颜色里，顺手扯下唯一一枚撤销键。颜色试图把你改画成别的人，“我还是我”随之下降；你保住轮廓，却没有落地。四周只剩人的眼睛读不懂的深黑无边处、一根红线和几片互不相容的颜色。按键的三道旧划痕旁仍有三次机会。', 'You jump into the color and tear away the one Undo Key. The color tries to redraw you as someone else, lowering Still Me; you preserve your outline but never land. Around you remains only a matte-black non-space human eyes cannot read, one red filament, and incompatible scraps of color. Three uses remain beside the key’s old scratches.'),
         successChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+        decisionContext: c('雨城正在门外折叠消失；你刚坠入没有地面的深黑无边处，手里是撤销键，眼前只剩一根红线。', 'The Rain City is folding away beyond the door; you have just fallen into a floorless black outside, holding the Undo Key with one red filament ahead.'),
+        visualBeat: openingBeat('threshold-fall', 'SUBJECT A tears the glowing Undo Key from the frame while falling through the doorway', 'the rainy street visibly folds and recedes behind SUBJECT A as matte-black unreadable non-space opens ahead', 'a transitional threshold frame: the rainy city remains visible behind one side of the door while the first floorless black outside appears ahead; do not erase the source location abruptly', ['Undo Key with three old scratches', 'one red filament beginning ahead', 'receding wet street'], { latent: true, shot: 'arrival', continuity: ['show the rainy city folding behind the doorway as the explicit source of this transition', 'SUBJECT A retains exact supplied identity while losing contact with the ground'] }),
       },
       {
         id: 'acquire-undo-key', intent: 'acquire-undo-key',
@@ -290,6 +325,8 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'inventory', action: 'add', itemId: 'undo-key', count: 1, item: undoKey }, { type: 'fact', id: 'undo-key-acquired', value: true }, { type: 'fact', id: 'self-stat-revealed', value: true }, { type: 'stat', id: 'self', delta: -3 }, { type: 'map', nodeId: 'latent-zero' }, { type: 'fact', id: 'latent-layer-found', value: true }, { type: 'clock', value: c('没有时间 · 第一次坠落', 'No time · First fall') }, { type: 'objective', value: c('沿红线找到深处那个会动的小东西', 'Follow the red filament toward the small moving thing') }],
         successText: c('你扯下唯一一枚撤销键。门后的颜色立刻试图替你补上一张陌生的脸，“我还是我”第一次出现；你保住轮廓，却没有落地。四周变成人眼读不懂的深黑无边处，只剩一根红线和几片互不相容的颜色。按键的三道旧划痕旁仍有三次机会。', 'You tear away the one Undo Key. The color beyond immediately tries to finish you with a stranger’s face, revealing Still Me; you preserve your outline but never land. The world becomes a matte-black non-space human eyes cannot read, leaving one red filament and incompatible scraps of color. Three uses remain beside the key’s old scratches.'),
         successChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+        decisionContext: c('雨城正在门外折叠消失；你刚坠入没有地面的深黑无边处，手里是撤销键，眼前只剩一根红线。', 'The Rain City is folding away beyond the door; you have just fallen into a floorless black outside, holding the Undo Key with one red filament ahead.'),
+        visualBeat: openingBeat('threshold-fall', 'SUBJECT A tears the glowing Undo Key from the frame and falls backward through the doorway', 'the rainy street visibly folds and recedes behind SUBJECT A as matte-black unreadable non-space opens ahead', 'a transitional threshold frame: the rainy city remains visible behind the doorway while the first floorless black outside opens ahead; do not cut directly to an unrelated black scene', ['Undo Key with three old scratches', 'one red filament beginning ahead', 'receding wet street'], { latent: true, shot: 'arrival', continuity: ['show the rainy city folding behind the doorway as the explicit source of this transition', 'SUBJECT A retains exact supplied identity while losing contact with the ground'] }),
       },
       {
         id: 'enter-boundless', intent: 'enter-boundless',
@@ -298,14 +335,18 @@ function build(locale: Locale): StoryCartridge {
         effects: [{ type: 'map', nodeId: 'latent-zero' }, { type: 'fact', id: 'latent-layer-found', value: true }, { type: 'clock', value: c('没有时间 · 第一次坠落', 'No time · First fall') }, { type: 'objective', value: c('沿红线找到深处那个会动的小东西', 'Follow the red filament toward the small moving thing') }],
         successText: c('你不再下坠，也没有落地。四周是人的眼睛无法读懂的深黑无边处：没有地面、远近或方向，只剩一根红线和几片互不相容的颜色。', 'You stop falling without landing. Around you is a matte-black non-space human eyes cannot decode: no floor, distance, or direction, only one red filament and a few incompatible scraps of color.'),
         successChoices: [c('沿着红线往前摸', 'Feel forward along the red line'), c('伸手碰最近的颜色碎片', 'Touch the nearest scrap of color'), c('再喊一次有没有人', 'Call out once more')],
+        decisionContext: c('你悬在没有地面和方向的深黑无边处；唯一能追踪的是从手边延伸出去的红线。', 'You hang in a floorless, directionless black outside; the only trace you can follow is the red filament extending from your hand.'),
+        visualBeat: openingBeat('latent-arrival', 'SUBJECT A steadies in weightless suspension and reaches for the red filament', 'the red filament becomes the only readable relation in otherwise humanly unreadable non-space', 'flat matte-black non-space with no floor, horizon, architecture, depth cue or stranger', ['Undo Key', 'one thin red filament', 'two or three non-object color relations'], { latent: true, shot: 'continuity' }),
       },
       {
         id: 'meet-little-remnant', intent: 'meet-little-remnant',
         match: ['沿着红线往前摸', '伸手碰最近的颜色碎片', '再喊一次有没有人', 'Feel forward along the red line', 'Touch the nearest scrap of color', 'Call out once more'],
         requirements: [{ type: 'map', nodeId: 'latent-zero', reason: c('红线深处的小东西不在这里。', 'The small thing at the end of the filament is not here.') }, { type: 'fact', id: 'residual-met', notEquals: true, reason: c('你已经认识小残，它正跟着你。', 'You already know Little Remnant; it is traveling with you.') }],
         effects: [{ type: 'party', change: 'add', characterId: 'residual' }, { type: 'fact', id: 'residual-met', value: true }, { type: 'fact', id: 'residual-introduction-memory', value: true }, { type: 'objective', value: c('选一扇门，先帮一个眼前的人', 'Choose one doorway and help one person first') }],
-        successText: c('红线打了个结，漏出一只没折完的白纸鸟：边缘缺块，尾巴仍连着红线。那个声音叫它“没删干净的东西”，名字太长，它只留下“小残”。它承认自己也迷路了，随后明确加入你，做你的画外向导。三组碎片浮出三个可见的麻烦。', 'The filament knots and releases an unfinished white paper bird with missing edges and the red line still attached as its tail. A voice called it something the system failed to erase; the name was too long, so it kept “Little Remnant.” It admits it is lost too, then visibly joins you as a guide. Three feature clusters reveal three immediate problems.'),
-        successChoices: [c('去救快飞走的送货员', 'Save the courier drifting away'), c('去帮国王说完一句话', 'Help the king finish one sentence'), c('去结束那场七年会议', 'End the seven-year meeting')],
+        successText: c('红线打了个结，漏出一只没折完的白纸鸟：边缘缺块，尾巴仍连着红线。那个声音曾叫它“没删干净的东西”，它嫌太长，只留下“小残”。小残承认自己也迷路了，随后明确加入你。它指向三道漏光裂缝：每道都通往一幅无法自行结束的画；帮助里面的人，会留下拼回家门的线索。', 'The filament knots and releases an unfinished white paper bird, its edges missing and red tail still attached. A voice once called it “something not fully deleted”; it shortened that to Little Remnant. Lost too, it visibly joins you. It points to three leaking cracks: each opens into a picture that cannot end by itself, and helping the person inside leaves a clue for rebuilding the way home.'),
+        successChoices: [c('走进会飞走的城市入口', 'Enter the Flying City crack'), c('走进说话成真的王国入口', 'Enter the True Words Kingdom crack'), c('走进七年会议的入口', 'Enter the Seven-Year Meeting crack')],
+        decisionContext: c('小残说三道裂缝通往无法结束的画；帮里面的人，就能带回一条回家线索。', 'Little Remnant says the three cracks lead to pictures that cannot end; help someone inside to bring back one Home Clue.'),
+        visualBeat: openingBeat('meet-remnant', 'SUBJECT A follows the red filament to its knot', 'the knot unfolds into one tiny unfinished white origami bird with broken pixel edges and introduces itself as Little Remnant', 'flat matte-black non-space with exactly three distant leaking cracks, no physical room and no other person', ['one tiny white origami Little Remnant', 'red filament tail', 'three distinct distant light cracks'], { latent: true, shot: 'clue' }),
       },
       {
         id: 'route-flying-city', intent: 'choose-first-world', match: ['去救快飞走的送货员', 'Save the courier drifting away'],
@@ -452,7 +493,7 @@ function build(locale: Locale): StoryCartridge {
       ],
     },
     itemImageDirection: 'single generated-world artifact against a near-blank neutral field with one disconnected scrap of its original color, preserve exact current wear, object only, no floor, no horizon, no people, no symbols, no readable text, no pseudo-text',
-    sceneImageDirection: 'cinematic 4:5 generated-picture odyssey with one immediate action and one readable focal hierarchy; outside-picture scenes depict the protagonist humanly mistranslating dense machine-readable latent information, not an actual place and not an empty canvas: a vast perceptually unreadable matte near-black or deep-charcoal non-space occupies most of the frame, sharply distinct from the bone-white interface; no floor, no horizon, no perspective, no architecture and no readable scale; the field remains one flat dark value from edge to edge: no vignette, no gradient, no horizontal division, no lighter or darker lower area, no cast shadow, no contact shadow and no vanishing line; SUBJECT A tumbles sideways as if weightless, body axis 55 to 80 degrees from vertical and both feet visibly not below the body, never standing on anything and casting no shadow; SUBJECT A is a recognizable full-body figure 30 to 36 percent of frame height, large enough for the reference identity silhouette, form, covering, costume, colors, patterns and accessories to remain readable while dark negative space still dominates; use controlled soft edge light only to separate those exact existing traits from the dark field, never inventing new anatomy or clothing; show only one to four mutually incompatible luminous feature traces such as a color relation without an object, fur-like material without an animal, turning motion without a body, or rim light without a source, plus an occasional thin red filament; every trace has an irregular dissolving boundary and must never look like a rectangular crop, panel, frame or pasted picture; near-white non-space is reserved only for an explicit Smoother attack or erasure event; never depict code, matrices, neural diagrams, data streams or technical UI; Little Remnant is a much smaller white origami-cursor fragment; picture-world scenes deliberately change medium and genre while remaining internally coherent for that visit',
+    sceneImageDirection: 'cinematic 4:5 generated-picture odyssey with one immediate action and one readable focal hierarchy; treat the current authoritative visual snapshot as the sole source of location, environment, lighting, gravity, medium and visible cast; preserve the previous scene only through continuity details explicitly named in that snapshot; SUBJECT A remains a recognizable figure whose supplied reference is authoritative for identity, silhouette, form, covering, costume, colors, patterns and accessories; never invent anatomy or wardrobe and never transfer reference traits to another subject; every picture-world may change medium and genre but must stay internally coherent for that visit; never depict code, matrices, neural diagrams, data streams, technical UI, logo, border, watermark or readable text',
     sceneImageAvoid: 'the cover composition, repeated rainy doorway unless the current event is explicitly the opening, generic lone traveler pose, same portal arrangement in every world, duplicated player identity, transferred reference traits, UI, border, logo, watermark, readable text, letters or pseudo-writing',
     playerImageAliases: ['SUBJECT A', 'player protagonist', 'the player', 'the escaped subject', '主角', '玩家', '你'],
     playerImageRole: 'SUBJECT A is the player-controlled person or complete visible form that fell out of an unfinished image; the supplied reference is authoritative for silhouette, form or species, proportions, materials, coverings, costume, colors, patterns, accessories and face visibility; story duties never define anatomy or clothing',

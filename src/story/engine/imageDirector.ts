@@ -1,4 +1,5 @@
 import { SCENE_IMAGE_PROMPT_VERSION, type ParsedScene, type SceneImageSubject, type SceneImageTrigger, type StoryCartridge, type StorySave, type StoryVisualBeat } from '../types'
+import { domainVisualBeatForAction } from './domainRules'
 
 export interface SceneImageDecision {
   prompt?: string
@@ -8,7 +9,7 @@ export interface SceneImageDecision {
   snapshot?: StoryVisualBeat
 }
 
-function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisualBeat): string {
+export function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisualBeat): string {
   const target = cartridge.mediaDirector?.imageTarget ?? { width: 640, height: 360 }
   const frame = target.height > target.width
     ? 'Create one fresh 4:5 portrait cinematic illustration. Keep the dominant action and identity-defining body cues inside the central 58% safe column while extending the environment to every edge.'
@@ -31,6 +32,34 @@ function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisualBeat): 
     'Show one instant only, with at most two focal subjects. No montage, split screen, before-and-after composition, flashback, speculative future, duplicated identity or unrelated background event.',
     'ABSOLUTELY NO VISIBLE WRITING OR LANGUAGE OF ANY KIND. All labels, signs, books, slides, cards and papers remain blank or use non-linguistic marks. No letters, words, numbers, pseudo-text, logo, border or UI.',
   ].filter(Boolean).join(' ')
+}
+
+export function upgradeAuthoredOpeningSnapshots(save: StorySave, cartridge: StoryCartridge): StorySave {
+  let changed = false
+  const blocks = save.blocks.map((block) => {
+    if (block.kind !== 'image') return block
+    const scene = Number(block.id.match(/^image-([1-4])$/)?.[1] ?? 0)
+    if (!scene || Number(block.data?.promptVersion ?? 0) >= SCENE_IMAGE_PROMPT_VERSION) return block
+    const action = save.blocks.find((candidate) => candidate.id === `action-${scene}` && candidate.kind === 'event')?.text ?? ''
+    const beat = domainVisualBeatForAction(cartridge, action)
+    if (!beat?.refresh) return block
+    changed = true
+    return {
+      ...block,
+      text: beat.location,
+      data: {
+        ...block.data,
+        prompt: buildSnapshotPrompt(cartridge, beat),
+        promptVersion: String(SCENE_IMAGE_PROMPT_VERSION),
+        playerVisible: beat.playerVisible ? 'true' : 'false',
+        visualSnapshot: JSON.stringify(beat),
+        visualPhase: beat.phase,
+        status: 'queued',
+        url: '',
+      },
+    }
+  })
+  return changed ? { ...save, blocks } : save
 }
 
 function lastScheduledScene(save: StorySave): number {

@@ -12,9 +12,11 @@ const page = await browser.newPage({ viewport })
 const evidence = new URL('./ui/campaign-director/', import.meta.url).pathname
 await mkdir(evidence, { recursive: true })
 const imagePrompts = []
+const imageRequests = []
 
 await page.route('**/alteru-media/api/v1/images/generations', async (route) => {
   const body = route.request().postDataJSON()
+  imageRequests.push(body)
   imagePrompts.push(String(body.prompt ?? body.input?.prompt ?? ''))
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
     task_id: `qa-${body.request_id}`, request_id: body.request_id, type: 'image', status: 'succeeded',
@@ -45,7 +47,16 @@ async function readWorld() {
 }
 
 async function advance(resultShot) {
+  await page.locator('.ct-civic-viewport.is-result').waitFor({ state: 'visible', timeout: 8_000 })
   const next = page.getByRole('button', { name: /查看下一步选择/ })
+  const readMore = page.getByRole('button', { name: /阅读下一段/ })
+  if (await readMore.isVisible().catch(() => false) && await next.isVisible().catch(() => false)) {
+    throw new Error('main next-choice CTA appeared before the result was fully read')
+  }
+  while (await page.locator('.ct-result-story>button:visible').count()) {
+    await page.locator('.ct-result-story>button:visible').first().evaluate((button) => button.click())
+    await page.waitForTimeout(25)
+  }
   await next.waitFor({ timeout: 8_000 })
   if (resultShot) await page.screenshot({ path: `${evidence}${resultShot.replace('390x844', viewportTag)}`, fullPage: true })
   await next.click()
@@ -62,17 +73,22 @@ await advance('01-opening-result-platform-layout-390x844.png')
 await choose(/叫住换脸的路人/)
 await choose(/拿走门框上的发亮按键/)
 await choose(/沿着红线往前摸/)
+await page.screenshot({ path: `${evidence}02-remnant-decision-platform-layout-${viewportTag}.png`, fullPage: true })
+const remnantDecisionText = await page.locator('.ct-civic-viewport').innerText()
+if (!/三道裂缝通往无法结束的画/.test(remnantDecisionText) || !/走进会飞走的城市入口/.test(remnantDecisionText)) {
+  throw new Error('Little Remnant decision lacks the visible bridge from cracks to recognizable entrances')
+}
 
 const routes = [
   {
-    entry: /七年会议/,
+    entry: /七年.*会议/,
     steps: [/请黎姨指出第一天/, /让黎姨问谁真的有话要说/, /请黎姨亲手关掉会议室/],
   },
   {
     entry: /贴标签的博物馆/,
     steps: [/挡住飞向梁叔的标签/, /让梁叔描述真正的你/, /请梁叔保留一块空说明牌/],
-    entryShot: '02-museum-entry-platform-layout-390x844.png',
-    endShot: '03-museum-return-platform-layout-390x844.png',
+    entryShot: '03-museum-entry-platform-layout-390x844.png',
+    endShot: '04-museum-return-platform-layout-390x844.png',
   },
   {
     entry: /会飞走的城市/,
@@ -81,12 +97,17 @@ const routes = [
   {
     entry: /说话成真的王国/,
     steps: [/让国王先停在沉默里/, /把加冕词改成一个问题/, /让全城练习一句沉默/],
-    endShot: '04-four-clues-platform-layout-390x844.png',
+    endShot: '05-four-clues-platform-layout-390x844.png',
   },
 ]
 
 for (let index = 0; index < routes.length; index += 1) {
   const route = routes[index]
+  const decisionLabels = await page.locator('.st-quick-replies button').allTextContents()
+  if (!decisionLabels.some((label) => route.entry.test(label))) {
+    const diagnostic = await readWorld()
+    throw new Error(`route entry missing at scene ${diagnostic?.scene}: ${decisionLabels.join(' / ')}; saved=${diagnostic?.choices?.map((choice) => choice.label).join(' / ')}`)
+  }
   await choose(route.entry, route.entryShot)
   for (const step of route.steps) await choose(step)
   if (route.endShot) await page.screenshot({ path: `${evidence}${route.endShot.replace('390x844', viewportTag)}`, fullPage: true })
@@ -119,7 +140,7 @@ await page.waitForFunction(() => {
   }
   return false
 }, { timeout: 8_000 })
-await page.screenshot({ path: `${evidence}05-finale-ready-platform-layout-${viewportTag}.png`, fullPage: true })
+await page.screenshot({ path: `${evidence}06-finale-ready-platform-layout-${viewportTag}.png`, fullPage: true })
 
 const world = await readWorld()
 if (world.version !== 8) throw new Error(`expected save v8, got ${world.version}`)
@@ -131,16 +152,20 @@ if (world.finale.status !== 'ready' || !world.sessionEnded) throw new Error('fin
 if (!world.characters.some((character) => character.id === 'default-seven' && character.status === 'known')) throw new Error('Default Seven was not visibly introduced before the finale')
 
 const snapshots = world.blocks.filter((block) => block.kind === 'image' && block.data?.visualSnapshot)
-if (snapshots.length !== 19) throw new Error(`expected 19 authoritative campaign frames, got ${snapshots.length}`)
+if (snapshots.length !== 23) throw new Error(`expected 23 authoritative story frames, got ${snapshots.length}`)
 for (const block of snapshots) {
   const snapshot = JSON.parse(block.data.visualSnapshot)
-  if (!snapshot.locationId || !snapshot.action || !snapshot.result || !snapshot.avoid?.includes('montage')) throw new Error(`incomplete visual snapshot on ${block.id}`)
+  if (!snapshot.locationId || !snapshot.action || !snapshot.result || !snapshot.avoid?.length) throw new Error(`incomplete visual snapshot on ${block.id}`)
+  if (!['unfinished-rain-city', 'latent-zero'].includes(snapshot.locationId) && !snapshot.avoid.includes('montage')) throw new Error(`campaign snapshot lacks montage guard on ${block.id}`)
   const prompt = String(block.data.prompt || '')
   if (!prompt.includes('AUTHORITATIVE SCENE SNAPSHOT') || !prompt.includes(snapshot.locationId.replaceAll('-', ' '))) throw new Error(`prompt is not derived from snapshot on ${block.id}`)
 }
 
 const bodyText = await page.locator('body').innerText()
 if (bodyText.includes('image_subject:') || bodyText.includes('请做出选择')) throw new Error('transport metadata or redundant prompt leaked into visible UI')
+if (imageRequests.some((request) => !Array.isArray(request.reference_urls) || request.reference_urls.length !== 1)) {
+  throw new Error('a player-visible scene image was released without exactly one avatar reference')
+}
 
 console.log(JSON.stringify({
   ok: true,

@@ -8,7 +8,7 @@ import { remoteAdapter } from './adapters/remote'
 import { resolveCartridge } from './cartridges'
 import { applyParsedScene, createImageBlock, createInitialSave, createRecoveryChoices, enterStory, localizeKnownState, normalizeCharacterState, updateImageBlock, updateInventoryItemImage } from './engine/reducer'
 import { isProtocolResidueText, parseStoryProtocol } from './engine/protocol'
-import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradePendingSceneImagePrompts } from './engine/imageDirector'
+import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradeAuthoredOpeningSnapshots, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
 import { resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
@@ -31,7 +31,7 @@ const DEFAULT_MEDIA_DIRECTOR: StoryMediaDirector = {
 // "generating" indefinitely, while still allowing a genuinely slow edit.
 const SCENE_IMAGE_TIMEOUT_MS = 60_000
 
-type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'partyMemberIds' | 'danger' | 'facts' | 'finale'> & {
+type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'partyMemberIds' | 'danger' | 'facts' | 'finale' | 'decisionContext'> & {
   version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   locale?: Locale
   characters?: StorySave['characters']
@@ -39,6 +39,7 @@ type LegacyStorySave = Omit<StorySave, 'version' | 'locale' | 'characters' | 'pa
   danger?: Partial<StorySave['danger']>
   facts?: StorySave['facts']
   finale?: StorySave['finale']
+  decisionContext?: string
   campaign?: Partial<StorySave['campaign']>
   imageUrl?: string
   imageStatus?: 'idle' | 'queued' | 'generating' | 'ready' | 'failed'
@@ -143,6 +144,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   const normalized = {
     ...repaired, ...characterState, version: 8, locale: repaired.locale ?? cartridge.locale,
     remoteChatId: incomingChatId || repaired.remoteChatId, blocks, inventory, map,
+    decisionContext: repaired.decisionContext?.trim() || repaired.objective || cartridge.opening.objective,
     facts: normalizeFacts(repaired.facts, cartridge.initialFacts),
     finale: repaired.finale?.ending
       ? { ...repaired.finale, status: 'complete' as const }
@@ -155,7 +157,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   if (!normalized.sessionEnded && normalized.choices.length < 2) normalized.choices = createRecoveryChoices(normalized, cartridge)
   const undoKey = normalized.inventory.find((item) => item.id === 'undo-key')
   if (undoKey && undoKey.count > 0) undoKey.count = 1
-  return upgradePendingSceneImagePrompts(syncDomainDerivedState(normalized, cartridge), cartridge)
+  return upgradePendingSceneImagePrompts(upgradeAuthoredOpeningSnapshots(syncDomainDerivedState(normalized, cartridge), cartridge), cartridge)
 }
 
 function inventoryImagePrompt(item: InventoryItem, cartridge: StoryCartridge): string {
@@ -238,7 +240,10 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
   // older image is still drawing, the newest beat is generated next instead
   // of making the visible loader wait behind the entire history.
   const pendingSceneImage = newestQueuedSceneImage(save.blocks)
-  const queuedSceneImage = imageIdentity.ready ? pendingSceneImage : undefined
+  const queuedSceneImage = imageIdentity.ready
+    && (pendingSceneImage?.data?.playerVisible !== 'true' || Boolean(imageIdentity.refUrl))
+    ? pendingSceneImage
+    : undefined
   const queuedItemImage = save.inventory.find((item) => item.imageStatus === 'queued')
   const queuedImageKey = queuedSceneImage ? `scene:${queuedSceneImage.id}` : queuedItemImage ? `item:${queuedItemImage.id}` : ''
 

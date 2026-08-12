@@ -84,13 +84,9 @@ for (const prompt of latentPrompts) {
 }
 
 const latentDirection = drawMeOut.sceneImageDirection ?? ''
-assert.match(latentDirection, /matte near-black or deep-charcoal/i)
-assert.match(latentDirection, /no vignette/i)
-assert.match(latentDirection, /no (?:cast shadow|contact shadow)/i)
-assert.match(latentDirection, /55 to 80 degrees/i)
-assert.match(latentDirection, /30 to 36 percent/i)
+assert.match(latentDirection, /current authoritative visual snapshot as the sole source of location/i)
 assert.match(latentDirection, /silhouette, form, covering, costume, colors, patterns and accessories/i)
-assert.match(latentDirection, /never look like a rectangular crop/i)
+assert.doesNotMatch(latentDirection, /matte near-black|no floor|no horizon/i, 'location-specific latent rules must not leak into the global direction')
 
 assert.deepEqual(drawMeOut.statDefinitions.map((stat) => stat.label), ['我还是我', '余力', '被发现'])
 assert.deepEqual(drawMeOutEn.statDefinitions.map((stat) => stat.label), ['Still Me', 'Strength', 'Detected'])

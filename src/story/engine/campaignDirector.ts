@@ -30,6 +30,7 @@ interface CampaignEpisode {
   resolutionResults: [string, string, string]
   resolutionFacts: [string, string, string]
   returnTrace: string
+  visualReturnTrace: string
 }
 
 const clueIds: Record<CampaignEpisodeId, CampaignEpisode['clueId']> = {
@@ -105,7 +106,7 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
   return {
     'flying-city': {
       id: 'flying-city', mapId: 'flying-city-rope-street', clueId: 'coordinate-weight', clueFact: 'coordinate-body',
-      hubChoice: s('进入会飞走的城市', 'Enter the Flying City'), title: s('会飞走的城市', 'The Flying City'),
+      hubChoice: s('走进会飞走的城市入口', 'Enter the Flying City crack'), title: s('会飞走的城市', 'The Flying City'),
       objective: s('让送货员和这条街重新落地', 'Return the courier and the street to the ground'),
       arrival: s('你穿过蓝色碎片，立刻开始向天空坠落。没钱的人把腰带拴在路灯上；一名送货员抱着早餐箱缓慢升高，鞋底离街面只剩最后一指。', 'You cross a blue fragment and immediately fall upward. People without subscriptions belt themselves to lampposts; a courier rises with a breakfast box, shoes one finger from the street.'),
       environment: 'a vertical city street where gravity is sold by a brass billing tower, residents tied to lamppost ropes, open sky above the street',
@@ -142,11 +143,13 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
         s('街上的人依次抓住绳索和彼此，把送货员稳稳接回地面。早餐箱底的蓝色碎片落进你掌心，重得像一条被所有人记住的新规则。', 'The street catches rope and one another, returning the courier to ground. The blue fragment beneath the breakfast box lands in your palm, heavy as a rule everyone now remembers.'),
         s('你把漏洞留在收费塔上：早餐经过的街区必须提供公共落地。送货员把唯一的蓝色碎片交给你，随后第一次站着完成配送。', 'You leave the loophole in the tower: streets crossed by breakfast must provide public ground. The courier gives you the one blue fragment, then completes the delivery standing.'),
       ],
-      resolutionFacts: ['weight-closure-stand', 'weight-closure-catch', 'weight-closure-rule'], returnTrace: 'one downward-pulling cobalt fragment and the tactile memory of feet meeting pavement',
+      resolutionFacts: ['weight-closure-stand', 'weight-closure-catch', 'weight-closure-rule'],
+      returnTrace: s('一枚始终向下坠的蓝色碎片，以及双脚重新碰到街面的触感', 'one downward-pulling cobalt fragment and the tactile memory of feet meeting pavement'),
+      visualReturnTrace: 'one downward-pulling cobalt fragment and the tactile memory of feet meeting pavement',
     },
     'words-kingdom': {
       id: 'words-kingdom', mapId: 'words-kingdom-palace', clueId: 'coordinate-choice', clueFact: 'coordinate-choice',
-      hubChoice: s('进入说话成真的王国', 'Enter the Kingdom of True Words'), title: s('说话会成真的王国', 'The Kingdom Where Words Come True'),
+      hubChoice: s('走进说话成真的王国入口', 'Enter the True Words Kingdom crack'), title: s('说话会成真的王国', 'The Kingdom Where Words Come True'),
       objective: s('让加冕词留下一个不被替作的空位', 'Leave one place in the coronation sentence nobody else can fill'),
       arrival: s('你落进停在半句的加冕礼。天空正替国王补完继承人的名字；每猜错一个人，宫墙就长出一间新牢房。', 'You land in a coronation frozen mid-sentence. The sky is completing the heir’s name; every wrong guess grows another prison from the palace wall.'),
       environment: 'an open palace court where spoken phrases become physical ribbons and wrong names grow small prison rooms from the walls', lighting: 'flat ceremonial noon light with transparent cyan silence and tarnished gold',
@@ -179,11 +182,13 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
         s('国王从王冠中央取下唯一的透明碎片，没有替它命名，只把选择交还给你。', 'The king removes the one transparent fragment from the crown, does not name it, and returns the choice to you.'),
         s('牢门打开，那些被错误名字造出来的人各自选择去处。最后一扇门消失时，透明碎片落进你手里。', 'The prison doors open and people made by wrong names choose where to go. When the last door vanishes, the transparent fragment falls into your hand.'),
         s('整座城共同沉默一息。天空没有崩塌，反而第一次听见别人；国王把王冠里的透明碎片交给你。', 'The whole city shares one breath of silence. The sky does not collapse; it hears others for the first time, and the king gives you the transparent fragment.'),
-      ], resolutionFacts: ['choice-closure-king', 'choice-closure-prisoners', 'choice-closure-silence'], returnTrace: 'one transparent unfilled center surrounded by the memory of a sentence allowed to stop',
+      ], resolutionFacts: ['choice-closure-king', 'choice-closure-prisoners', 'choice-closure-silence'],
+      returnTrace: s('一枚中央留空的透明碎片，以及一句话终于可以停下来的记忆', 'one transparent unfilled center surrounded by the memory of a sentence allowed to stop'),
+      visualReturnTrace: 'one transparent unfilled center surrounded by the memory of a sentence allowed to stop',
     },
     'endless-meeting': {
       id: 'endless-meeting', mapId: 'endless-meeting-room-three', clueId: 'coordinate-leaving', clueFact: 'coordinate-boundary',
-      hubChoice: s('进入开了七年的会议', 'Enter the Seven-Year Meeting'), title: s('永远散不了会的办公室', 'The Endless Meeting'),
+      hubChoice: s('走进七年会议的入口', 'Enter the Seven-Year Meeting crack'), title: s('永远散不了会的办公室', 'The Endless Meeting'),
       objective: s('结束这场会议，同时保住真正记得时间的人', 'End the meeting while preserving the person who remembers time'),
       arrival: s('你坐进一场已经开了七年的周会。主管每翻一页空白幻灯片，办公室就换一种故事。一位戴着记满日期手套的保洁员停下拖把；大家叫她黎姨，只有她记得前六年。', 'You sit down in a weekly meeting now seven years old. Each blank slide changes the office story. A cleaner wearing gloves covered in dates stops her mop; everyone calls her Auntie Li, and only she remembers the previous six years.'),
       environment: 'a fluorescent conference room trapped on a blank final slide, seven years of coffee rings and cleaning marks accumulating', lighting: 'fixed green-white fluorescent ceiling light with one warm corridor beyond the door',
@@ -216,11 +221,13 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
         s('你等到最后一个人跨过门槛，会议室才缩回普通房间。黎姨从废纸篓里捡出唯一的温热碎片交给你。', 'You wait for the last worker to cross the threshold before the room becomes ordinary. Auntie Li retrieves the one warm fragment from the bin.'),
         s('黎姨亲手关灯、关门，把第七副手套留在里面。她将废纸篓里唯一的温热碎片交给你：“结束也得有人作证。”', 'Auntie Li switches off the light and closes the door, leaving the seventh gloves inside. She gives you the one warm fragment: “An ending needs a witness too.”'),
         s('最后一页不再刷新，屏幕只剩一片安静的灰。那片灰收成唯一的温热碎片，落进你手里。', 'The final slide stops refreshing and becomes quiet gray. The gray gathers into the one warm fragment and drops into your hand.'),
-      ], resolutionFacts: ['leaving-closure-last-worker', 'leaving-closure-auntie', 'leaving-closure-slide'], returnTrace: 'one warm gray fragment and the sensation of a door finally closing behind someone',
+      ], resolutionFacts: ['leaving-closure-last-worker', 'leaving-closure-auntie', 'leaving-closure-slide'],
+      returnTrace: s('一枚温热的灰色碎片，以及门终于在身后关上的感觉', 'one warm gray fragment and the sensation of a door finally closing behind someone'),
+      visualReturnTrace: 'one warm gray fragment and the sensation of a door finally closing behind someone',
     },
     'label-museum': {
       id: 'label-museum', mapId: 'label-museum-side-door', clueId: 'coordinate-remembered', clueFact: 'coordinate-remembered',
-      hubChoice: s('进入会贴标签的博物馆', 'Enter the Labeling Museum'), title: s('会给人贴标签的博物馆', 'The Labeling Museum'),
+      hubChoice: s('走进会贴标签的博物馆入口', 'Enter the Labeling Museum crack'), title: s('会给人贴标签的博物馆', 'The Labeling Museum'),
       objective: s('阻止错误标签把守门人改成展品', 'Stop a false label from turning the gatekeeper into an exhibit'),
       arrival: s('你从侧门进入博物馆。说明牌正从墙上飞下来贴向游客；被贴中的人会慢慢长成牌上写的样子。一位穿旧靛蓝制服、胸前只有针孔的守门人挡住它们。他守侧门七年，大家叫他梁叔。', 'You enter through the museum side door. Labels fly from walls toward visitors, who slowly become whatever the labels claim. A gatekeeper in a worn indigo uniform, pinholes on his empty chest, blocks them. He has guarded this door for seven years; everyone calls him Uncle Liang.'),
       environment: 'a museum side gallery where blank-framed labels fly like stiff paper and exhibits begin defining visitors', lighting: 'cool skylight with narrow warm side-door light, silver clue highlights and indigo uniform',
@@ -253,7 +260,9 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
         s('梁叔把最后一块说明牌留空，只在背面按下自己的指纹。空框里凝出唯一的银色碎片：不是标签记住了你，是一个人记住了你。', 'Liang leaves the final label blank and presses a fingerprint on its back. The frame yields one silver fragment: a person remembered you, not a label.'),
         s('游客们不说职业和标签，只逐个叫出彼此真正使用的名字。那些声音汇成唯一的银色碎片，梁叔把它交给你。', 'The visitors avoid roles and labels, calling one another by the names they actually use. Their voices gather into one silver fragment, which Liang gives you.'),
         s('你不写“我是谁”，只留下自己做过的事。梁叔准确复述那件事，访客簿里升起唯一的银色碎片。', 'You record not who you are, only what you did. Liang recounts it accurately, and the visitor record releases one silver fragment.'),
-      ], resolutionFacts: ['remembered-closure-blank', 'remembered-closure-visitors', 'remembered-closure-record'], returnTrace: 'one fingerprint-warm silver fragment and one accurate memory of the player’s latest action',
+      ], resolutionFacts: ['remembered-closure-blank', 'remembered-closure-visitors', 'remembered-closure-record'],
+      returnTrace: s('一枚带着指纹温度的银色碎片，以及梁叔对你刚才行动的准确记忆', 'one fingerprint-warm silver fragment and one accurate memory of the player’s latest action'),
+      visualReturnTrace: 'one fingerprint-warm silver fragment and one accurate memory of the player’s latest action',
     },
   }
 }
@@ -307,7 +316,7 @@ function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], ac
     action: visualAction || action,
     result,
     subjects: phase === 'return' ? ['SUBJECT A', 'Little Remnant'] : episode.subjects,
-    props: phase === 'return' ? [episode.returnTrace] : episode.props,
+    props: phase === 'return' ? [episode.visualReturnTrace] : episode.props,
     environment: phase === 'return' ? 'vast matte near-black non-space with no floor, horizon, perspective, architecture or readable distance' : episode.environment,
     lighting: phase === 'return' ? 'controlled soft edge light with one episode-colored trace' : episode.lighting,
     continuity: phase === 'arrival'
@@ -319,8 +328,11 @@ function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], ac
   }
 }
 
-function accepted(id: string, effects: DomainEffect[], text: string, choices: [string, string, string], visual: StoryVisualBeat): DomainActionResolution {
-  return { status: 'accepted', ruleId: id, intent: id, effects, reasons: [], successText: text, successChoices: choices, visualBeat: visual }
+function accepted(id: string, effects: DomainEffect[], text: string, choices: [string, string, string], visual: StoryVisualBeat, decisionContext?: string): DomainActionResolution {
+  const source = decisionContext?.trim() || text
+  const max = /[\u3400-\u9fff]/.test(source) ? 41 : 150
+  const context = source.length <= max ? source : `${source.slice(0, max - 1).trim()}…`
+  return { status: 'accepted', ruleId: id, intent: id, effects, reasons: [], successText: text, successChoices: choices, decisionContext: context, visualBeat: visual }
 }
 
 function finaleVisual(locale: Locale, shot: StoryVisualBeat['shot'], action: string, result: string, props: string[]): StoryVisualBeat {
@@ -485,7 +497,7 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
       allComplete
         ? (cartridge.locale === 'zh' ? ['让四条线索拼出出口', '先确认出口的代价', '寻找抹平者留下的白痕'] : ['Join the four clues into an exit', 'Learn the exit cost first', 'Follow the Smoother’s white trace'])
         : hubChoices(cartridge.locale, completed),
-      visualBeat(episode, 'return', action, summary, `SUBJECT A and Little Remnant return carrying ${episode.returnTrace}`, true),
+      visualBeat(episode, 'return', action, summary, `SUBJECT A and Little Remnant return carrying ${episode.visualReturnTrace}`, true),
     )
   }
   return undefined

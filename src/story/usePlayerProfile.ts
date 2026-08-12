@@ -23,7 +23,7 @@ export function usePlayerProfile(): PlayerProfile {
   const [profile, setProfile] = useState<PlayerProfile>(() => ({
     name: debugName || 'AlterU',
     avatarUrl: debugAvatar || fallbackAvatar,
-    imageRefUrl: publicHttpsUrl(debugAvatar),
+    imageRefUrl: publicHttpsUrl(debugAvatar) ?? publicHttpsUrl(fallbackAvatar),
     loaded: Boolean(debugAvatar),
     source: debugAvatar || debugName ? 'debug' : 'default',
   }))
@@ -45,7 +45,7 @@ export function usePlayerProfile(): PlayerProfile {
       )
       const data = response?.data
       const platformAvatar = data?.head_url?.trim() || ''
-      const chosenAvatar = debugAvatar || platformAvatar
+      const chosenAvatar = debugAvatar || platformAvatar || fallbackAvatar
       resolvedPlayerId.current = playerId
       setProfile({
         name: debugName || data?.name?.trim() || data?.user_name?.trim() || 'AlterU',

@@ -262,17 +262,18 @@ function splitCaptionPages(value: string, maxUnits = 62): string[] {
   return pages
 }
 
-function CivicResultStory({ block, cartridge }: { block: StoryBlock; cartridge: StoryCartridge }) {
+function CivicResultStory({ block, cartridge, onCompletionChange }: { block: StoryBlock; cartridge: StoryCartridge; onCompletionChange: (complete: boolean) => void }) {
   const pages = useMemo(() => splitCaptionPages(block.text, 82), [block.id, block.text])
   const [page, setPage] = useState(0)
   useEffect(() => { setPage(0) }, [block.id])
+  useEffect(() => { onCompletionChange(pages.length <= 1 || page >= pages.length - 1) }, [onCompletionChange, page, pages.length])
   const current = pages[Math.min(page, Math.max(0, pages.length - 1))] ?? block.text
   return <section className={`ct-result-story ct-result-story--${block.kind}`} data-block-id={block.id}>
     <div>
       {block.kind === 'dialogue' && block.speaker && <small>{block.speaker}</small>}
       <p>{current}</p>
     </div>
-    {pages.length > 1 && <button type="button" aria-label={t(cartridge.locale, 'nextCaptionPage')} onClick={() => setPage((currentPage) => (currentPage + 1) % pages.length)}><span>{page + 1}/{pages.length}</span><Icon name="arrow" /></button>}
+    {page < pages.length - 1 && <button type="button" aria-label={t(cartridge.locale, 'nextCaptionPage')} onClick={() => setPage((currentPage) => Math.min(currentPage + 1, pages.length - 1))}><small>{t(cartridge.locale, 'continueReading')}</small><span>{page + 1}/{pages.length}</span><Icon name="arrow" /></button>}
   </section>
 }
 
@@ -301,13 +302,14 @@ function compactBeat(blocks: StoryBlock[], overlayId: string | undefined, uiVari
   return [narration, ...dialogue, ...outcome].filter((block): block is StoryBlock => Boolean(block))
 }
 
-function CinematicStage({ cartridge, engine, player, previewScene, onReturnLatest, onDecisionReadyChange, uiVariant, turnPhase, lastAction }: {
+function CinematicStage({ cartridge, engine, player, previewScene, onReturnLatest, onDecisionReadyChange, onResultReadyChange, uiVariant, turnPhase, lastAction }: {
   cartridge: StoryCartridge
   engine: ReturnType<typeof useStoryEngine>
   player: PlayerProfile
   previewScene: number | null
   onReturnLatest: () => void
   onDecisionReadyChange: (ready: boolean) => void
+  onResultReadyChange: (ready: boolean) => void
   uiVariant: UiVariant
   turnPhase: TurnPhase
   lastAction: string
@@ -324,10 +326,13 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const videoStatus = String(image?.data?.videoStatus ?? 'idle')
   const isPreview = previewScene != null && previewScene !== engine.save.scene
   const selectedOverlayBlock = selectStageOverlay(blocks, turnPhase, isPreview)
+  const decisionContextBlock: StoryBlock | undefined = !isPreview && turnPhase === 'decision' && scene > 0 && engine.save.decisionContext.trim()
+    ? { id: `decision-context-${scene}`, kind: 'narration', text: engine.save.decisionContext, speaker: t(cartridge.locale, 'currentSituation') }
+    : undefined
   // The result owns the lower outcome tray. Keeping the persistent caption here
   // would show the same beat twice and visually compete with the resolved action.
   // The caption returns only after the player advances into the next decision.
-  const overlayBlock = !isPreview && turnPhase === 'result' ? undefined : selectedOverlayBlock
+  const overlayBlock = !isPreview && turnPhase === 'result' ? undefined : selectedOverlayBlock ?? decisionContextBlock
   const actionBlock = blocks.find((block) => block.kind === 'event' && block.id.startsWith('action-'))
   const actionText = isPreview
     ? actionBlock?.text
@@ -337,20 +342,24 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const visibleCompact = !isPreview && (turnPhase === 'resolving' || (turnPhase === 'decision' && !openingDecision)) ? [] : compact
   const speakerInitial = overlayBlock?.kind === 'dialogue' && overlayBlock.speaker ? Array.from(overlayBlock.speaker)[0] : ''
   const captionPages = useMemo(
-    () => splitCaptionPages(overlayBlock?.text ?? '', overlayBlock?.kind === 'dialogue' ? 44 : 54),
-    [overlayBlock?.id, overlayBlock?.kind, overlayBlock?.text],
+    () => splitCaptionPages(overlayBlock?.text ?? '', decisionContextBlock ? 90 : overlayBlock?.kind === 'dialogue' ? 44 : 54),
+    [decisionContextBlock, overlayBlock?.id, overlayBlock?.kind, overlayBlock?.text],
   )
   const [captionPage, setCaptionPage] = useState(0)
   const beatRef = useRef<HTMLElement>(null)
   const [civicBeatHeight, setCivicBeatHeight] = useState<number | null>(null)
   useEffect(() => { setCaptionPage(0) }, [overlayBlock?.id, scene])
   useEffect(() => {
+    if (decisionContextBlock) {
+      onDecisionReadyChange(true)
+      return
+    }
     if (isPreview || turnPhase !== 'decision' || scene > 3) {
       onDecisionReadyChange(true)
       return
     }
     onDecisionReadyChange(captionPages.length <= 1 || captionPage >= captionPages.length - 1)
-  }, [captionPage, captionPages.length, isPreview, onDecisionReadyChange, scene, turnPhase])
+  }, [captionPage, captionPages.length, decisionContextBlock, isPreview, onDecisionReadyChange, scene, turnPhase])
   useEffect(() => {
     if (uiVariant !== 'civic' || turnPhase !== 'result' || isPreview) {
       setCivicBeatHeight(null)
@@ -369,6 +378,10 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const civicResultStory = uiVariant === 'civic' && turnPhase === 'result' && !isPreview
     ? visibleCompact.find((block) => block.kind === 'narration' || block.kind === 'dialogue')
     : undefined
+  useEffect(() => {
+    if (isPreview || turnPhase !== 'result') return
+    if (!civicResultStory) onResultReadyChange(true)
+  }, [civicResultStory, isPreview, onResultReadyChange, turnPhase])
   const civicResultOutcomes = civicResultStory ? visibleCompact.filter((block) => block.id !== civicResultStory.id) : visibleCompact
   const compactCivicBeat = uiVariant === 'civic' && turnPhase === 'result' && !isPreview && !engine.error
     && visibleCompact.length === 1 && visibleCompact[0].kind === 'event' && captionUnitLength(visibleCompact[0].text) <= 82
@@ -397,7 +410,7 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
       <div className="ct-stage__blocks">
         {!isPreview && turnPhase === 'decision' && !openingDecision && <div className="ct-stage__decision-context"><small>{t(cartridge.locale, 'currentObjective')}</small><p>{engine.save.objective}</p></div>}
         {actionText && !isPreview && uiVariant !== 'civic' && turnPhase !== 'decision' && <div className={`st-message st-message--player${engine.pendingAction ? ' is-pending' : ''}`} data-pending-action><div className="st-message__body"><small>{t(cartridge.locale, 'yourAction')}</small><p>{actionText}</p></div><PlayerAvatar profile={player} locale={cartridge.locale} /></div>}
-        {civicResultStory && <CivicResultStory block={civicResultStory} cartridge={cartridge} />}
+        {civicResultStory && <CivicResultStory key={civicResultStory.id} block={civicResultStory} cartridge={cartridge} onCompletionChange={onResultReadyChange} />}
         {civicResultOutcomes.map((block) => <StoryBlockView block={block} cartridge={cartridge} retryImage={engine.retryImage} player={player} key={block.id} />)}
         {engine.progress && !isPreview && <div className="st-typing"><span><i /><i /><i /></span><p>{engine.progress.label}</p></div>}
         {engine.error && !isPreview && <div className="st-inline-error" data-story-error><p>{engine.error}</p><div>{engine.canRetry && <button onClick={engine.retryAction}>{t(cartridge.locale, 'retryAction')}</button>}{engine.mode === 'remote' && <button onClick={engine.useAigramFallback}>{t(cartridge.locale, 'aigramFallback')}</button>}</div></div>}
@@ -655,6 +668,7 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
   const [textSize, setTextSizeState] = useState<TextSize>(() => readTextSize())
   const [turnPhase, setTurnPhase] = useState<TurnPhase>('decision')
   const [decisionNarrativeReady, setDecisionNarrativeReady] = useState(true)
+  const [resultNarrativeReady, setResultNarrativeReady] = useState(false)
   const [lastAction, setLastAction] = useState('')
   const submittedScene = useRef(engine.save.scene)
   const feedRef = useRef<HTMLDivElement>(null)
@@ -801,6 +815,7 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
     responseAnchor.current = { from: engine.save.blocks.length }
     submittedScene.current = engine.save.scene
     setLastAction(action)
+    setResultNarrativeReady(false)
     setTurnPhase('resolving')
     audio.cue('action')
     engine.act(action, nextLocale)
@@ -821,14 +836,14 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
   }, [decisionNarrativeReady, engine.save.choices, engine.busy, engine.save.scene, showResumeLatest, turnPhase])
 
   if (!engine.loaded) return <div className="st-loading" style={setCssTheme(cartridge)}><i /><span>{t(cartridge.locale, 'restoring')}</span></div>
-  if (!engine.save.entered) return <Entry cartridge={cartridge} onEnter={() => { audio.cue('open'); setLastAction(cartridge.opening.entryAction ?? cartridge.copy.enter); setTurnPhase(cartridge.opening.entryAction ? 'result' : 'decision'); engine.enter() }} onSelect={onSelect} mode={engine.mode} setMode={engine.setMode} hasSave={engine.save.scene > 0} remoteAvailable={Boolean(engine.save.remoteChatId)} />
-  const stage = <CinematicStage cartridge={cartridge} engine={engine} player={player} previewScene={previewScene} onReturnLatest={() => setPreviewScene(null)} onDecisionReadyChange={setDecisionNarrativeReady} uiVariant={uiVariant} turnPhase={turnPhase} lastAction={lastAction} />
+  if (!engine.save.entered) return <Entry cartridge={cartridge} onEnter={() => { audio.cue('open'); setLastAction(cartridge.opening.entryAction ?? cartridge.copy.enter); setResultNarrativeReady(false); setTurnPhase(cartridge.opening.entryAction ? 'result' : 'decision'); engine.enter() }} onSelect={onSelect} mode={engine.mode} setMode={engine.setMode} hasSave={engine.save.scene > 0} remoteAvailable={Boolean(engine.save.remoteChatId)} />
+  const stage = <CinematicStage cartridge={cartridge} engine={engine} player={player} previewScene={previewScene} onReturnLatest={() => setPreviewScene(null)} onDecisionReadyChange={setDecisionNarrativeReady} onResultReadyChange={setResultNarrativeReady} uiVariant={uiVariant} turnPhase={turnPhase} lastAction={lastAction} />
   const finaleBlocking = engine.save.finale.status !== 'idle' && !engine.save.finale.epilogueActive
   const controls = finaleBlocking ? null : previewScene != null
     ? <button type="button" className="ct-return-latest" onClick={() => setPreviewScene(null)}>{t(cartridge.locale, 'returnLatest')}<Icon name="arrow" /></button>
     : turnPhase === 'decision' && (engine.save.scene > 3 || decisionNarrativeReady)
       ? <Composer cartridge={cartridge} engine={engine} onAct={act} uiVariant={uiVariant} />
-      : turnPhase === 'result' && !engine.error
+      : turnPhase === 'result' && !engine.error && resultNarrativeReady
         ? <button type="button" className={`ct-turn-next ${uiVariant === 'civic' ? 'ct-civic-next' : 'ct-living-next'}`} onClick={() => { setDecisionNarrativeReady(false); setTurnPhase('decision'); setLastAction('') }}><span><small>{t(cartridge.locale, 'resultReady')}</small><strong>{t(cartridge.locale, 'showNextChoices')}</strong></span><Icon name="arrow" /></button>
         : null
   const civicViewportState = previewScene != null ? 'is-preview' : `is-${turnPhase}${engine.error ? ' has-error' : ''}`

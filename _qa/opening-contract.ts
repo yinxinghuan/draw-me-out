@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { drawMeOut, drawMeOutEn } from '../src/story/cartridges/drawMeOut'
 import { resolveDomainAction } from '../src/story/engine/domainRules'
 import { applyParsedScene, createInitialSave, enterStory } from '../src/story/engine/reducer'
+import { upgradeAuthoredOpeningSnapshots } from '../src/story/engine/imageDirector'
 import type { StorySave } from '../src/story/types'
 
 const emptyScene = { blocks: [], commands: [], raw: '' }
@@ -22,6 +23,10 @@ assert.equal(entered.stats.compute, 61)
 assert.equal(entered.blocks.filter((block) => block.id.startsWith('action-')).length, 1)
 assert.equal(entered.choices.some((choice) => /碰.*雨/.test(choice.label)), false)
 assert.deepEqual(entered.choices.map((choice) => choice.label), ['叫住换脸的路人', '摸一下街边的空白', '直接跑向那扇门'])
+assert.match(entered.decisionContext, /雨城仍在眼前/)
+const touchImage = entered.blocks.find((block) => block.id === 'image-1')
+assert.match(String(touchImage?.data?.prompt ?? ''), /unfinished rainy city/i)
+assert.doesNotMatch(String(touchImage?.data?.prompt ?? ''), /vast perceptually unreadable matte near-black/i)
 
 const actions = ['叫住换脸的路人', '摸一下街边的空白', '直接跑向那扇门']
 const governed = (source: StorySave, action: string): StorySave => {
@@ -39,9 +44,26 @@ assert.equal(new Set(branches.map((save) => `${save.stats.self}/${save.stats.com
 assert.equal(branches[0].facts['trace-stat-revealed'], true)
 assert.equal(branches[1].facts['self-stat-revealed'], true)
 assert.equal(branches[2].facts['trace-stat-revealed'], true)
+const blankImage = branches[1].blocks.find((block) => block.id === 'image-2')
+assert.match(String(blankImage?.data?.prompt ?? ''), /rainy street fills most of the frame/i)
+assert.match(String(blankImage?.data?.prompt ?? ''), /continues along the rainy street to the distant door/i)
+assert.match(String(blankImage?.data?.prompt ?? ''), /Forbidden in this frame: matte-black latent void; empty black background/i)
 
 let flying = governed(JSON.parse(JSON.stringify(branches[0])) as StorySave, '拿走门框上的发亮按键')
 flying = governed(flying, '沿着红线往前摸')
+assert.match(flying.decisionContext, /三道裂缝/)
+assert.deepEqual(flying.choices.map((choice) => choice.label), ['走进会飞走的城市入口', '走进说话成真的王国入口', '走进七年会议的入口'])
+const legacyOpening = JSON.parse(JSON.stringify(flying)) as StorySave
+legacyOpening.blocks = legacyOpening.blocks.map((block) => block.kind === 'image' && /^image-[1-4]$/.test(block.id)
+  ? { ...block, data: { ...block.data, promptVersion: '9', status: 'ready', url: `https://old.invalid/${block.id}.png`, visualSnapshot: '' } }
+  : block)
+const upgradedOpening = upgradeAuthoredOpeningSnapshots(legacyOpening, drawMeOut)
+const upgradedFrames = upgradedOpening.blocks.filter((block) => block.kind === 'image' && /^image-[1-4]$/.test(block.id))
+assert.equal(upgradedFrames.length, 4)
+assert.equal(upgradedFrames.every((block) => block.data?.status === 'queued' && block.data?.url === '' && block.data?.visualSnapshot), true)
+assert.match(String(upgradedFrames.find((block) => block.id === 'image-2')?.data?.prompt ?? ''), /unfinished rain city/i)
+assert.match(String(upgradedFrames.find((block) => block.id === 'image-3')?.data?.prompt ?? ''), /rainy street visibly folds and recedes/i)
+assert.match(String(upgradedFrames.find((block) => block.id === 'image-4')?.data?.prompt ?? ''), /tiny unfinished white origami bird/i)
 flying = governed(flying, '去救快飞走的送货员')
 const flyingMethods = ['抓住送货员和早餐箱', '让小残钻进收费塔检修口', '告诉收费塔早餐属于公共服务'].map((action) => governed(JSON.parse(JSON.stringify(flying)) as StorySave, action))
 assert.deepEqual(flyingMethods.map((save) => save.facts['weight-method']), ['direct-catch', 'remnant-hatch', 'public-service'])

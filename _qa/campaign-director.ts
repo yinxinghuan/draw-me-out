@@ -26,12 +26,14 @@ act('叫住换脸的路人')
 act('拿走门框上的发亮按键')
 act('沿着红线往前摸')
 assert.equal(save.campaign.phase, 'hub')
+assert.match(save.decisionContext, /三道裂缝|three cracks/i)
+assert.deepEqual(save.choices.map((choice) => choice.label), ['走进会飞走的城市入口', '走进说话成真的王国入口', '走进七年会议的入口'])
 
 const order = [
-  '进入会给人贴标签的博物馆',
-  '进入开了七年的会议',
-  '进入会飞走的城市',
-  '进入说话成真的王国',
+  '走进会贴标签的博物馆入口',
+  '走进七年会议的入口',
+  '走进会飞走的城市入口',
+  '走进说话成真的王国入口',
 ]
 
 order.forEach((entry, episodeIndex) => {
@@ -72,8 +74,9 @@ assert(save.characters.some((character) => character.id === 'default-seven' && c
 const snapshots = save.blocks
   .filter((block) => block.kind === 'image' && block.data?.visualSnapshot)
   .map((block) => JSON.parse(String(block.data?.visualSnapshot)) as { locationId: string; shot: string; avoid: string[] })
-assert.equal(snapshots.length, 19)
-assert.equal(snapshots.every((snapshot) => snapshot.locationId && snapshot.shot && snapshot.avoid.includes('montage')), true)
+assert.equal(snapshots.length, 23)
+assert.equal(snapshots.every((snapshot) => snapshot.locationId && snapshot.shot && snapshot.avoid.length > 0), true)
+assert.equal(snapshots.filter((snapshot) => !['unfinished-rain-city', 'latent-zero'].includes(snapshot.locationId)).every((snapshot) => snapshot.avoid.includes('montage')), true)
 
 console.log(JSON.stringify({
   ok: true,
