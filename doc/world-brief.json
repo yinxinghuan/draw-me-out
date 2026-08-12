@@ -8,33 +8,33 @@
     "languages": ["zh", "en"]
   },
   "experience": {
-    "playerFantasy": "You are the only person who remembers being real, trapped inside an image model's latent space and escaping through unstable generated worlds.",
+    "playerFantasy": "You are an ordinary person who remembers being real, trapped outside a series of unstable pictures and trying to find a way home.",
     "emotionalPromise": "A brisk, funny and increasingly moving escape adventure where visual inconsistency becomes the mystery, and every strange world tests what makes you yourself.",
-    "commonKnowledgeBoundary": "The story uses familiar ideas such as pictures, loading, undo, drafts and deleted files; it never requires knowledge of machine learning or image-generation terminology.",
+    "commonKnowledgeBoundary": "The protagonist knows less technical language than the average player. The story begins with touchable facts—frozen rain, repeating strangers, a door outside the picture—and only gives one everyday nickname to each idea after it is experienced. Internal machine-learning terminology never appears in player choices.",
     "openingObjective": "Survive the first unfinished picture, reach the stable latent hub, and find the first fragment of a route back to reality."
   },
   "world": {
     "fixedRules": [
       "The player's complete visible identity comes from the current user avatar and cannot be silently reassigned to another character, creature, reflection or prop.",
-      "The Latent Layer always returns to the same black-glass plain, white horizon, red cursor filament and unfinished picture windows, even while individual picture worlds change style radically.",
+      "The actual latent representation is high-dimensional machine-readable information, not a physical place or empty canvas. The protagonist experiences unreadable content as a boundless matte-black non-space because human perception cannot decode it; only disconnected luminous color relations, edge tendencies, material hints, motion traces and an occasional red filament become briefly visible.",
       "Items, companions, promises, injuries, revealed memories and Reality Coordinate Fragments persist across worlds until a visible event changes them.",
       "Characters may gradually notice choices, retries, captions and generation failures, but fourth-wall knowledge must be earned and cannot appear as random omniscience.",
       "The player's main goal is to reach reality, while the cost of escape and the truth of that reality remain open to discovery and choice."
     ],
     "generationRules": [
-      "AI may create new picture worlds, local contradictions, inhabitants and exits while preserving the Latent Layer, persistent cast and confirmed state.",
-      "Every turn must change a location, threat, relationship, item, coordinate fragment, identity fact or immediate objective; empty confirmation loops are forbidden.",
+      "AI may create new picture worlds, local contradictions, inhabitants and exits while preserving the place outside the pictures, persistent cast and confirmed state.",
+      "Every turn must change a location, threat, relationship, item, Home Clue, identity fact or immediate objective; empty confirmation loops are forbidden.",
       "A picture-world visit lasts three to five decisions, with at most one optional side thread lasting one or two decisions before a concrete consequence or return.",
       "Humor comes from worlds taking visual and bureaucratic rules literally, not from unrelated memes or constant jokes.",
-      "Endings are generated from accumulated identity facts, companions, Undo Key costs, saved worlds, abandoned worlds and coordinate fragments rather than selected from only three fixed endings."
+      "Endings are generated from accumulated identity facts, companions, Undo Key costs, saved worlds, abandoned worlds and Home Clues rather than selected from only three fixed endings."
     ],
     "maxActiveThreads": 2
   },
   "stats": [
     {
       "id": "self",
-      "labelZh": "自我",
-      "labelEn": "Self",
+      "labelZh": "我还是我",
+      "labelEn": "Still Me",
       "min": 0,
       "max": 100,
       "initial": 82,
@@ -46,8 +46,8 @@
     },
     {
       "id": "compute",
-      "labelZh": "算力",
-      "labelEn": "Compute",
+      "labelZh": "余力",
+      "labelEn": "Strength",
       "min": 0,
       "max": 100,
       "initial": 65,
@@ -59,8 +59,8 @@
     },
     {
       "id": "trace",
-      "labelZh": "追踪",
-      "labelEn": "Trace",
+      "labelZh": "被发现",
+      "labelEn": "Detected",
       "min": 0,
       "max": 100,
       "initial": 18,
@@ -106,10 +106,10 @@
   },
   "visuals": {
     "material": "wayfarer",
-    "artDirection": "cinematic generated-picture odyssey framed by a stable black-glass latent hub, crisp editorial UI, deliberate radical style shifts between worlds, full-avatar identity preserved",
+    "artDirection": "cinematic generated-picture odyssey framed by a human perceptual mistranslation of machine-readable latent information: boundless matte-black, non-spatial and fragmentary without depicting code or technical diagrams; crisp bone-white editorial UI remains visually distinct, deliberate radical style shifts between worlds, full-avatar identity preserved",
     "entryScene": "an unfinished rain-soaked city image still assembling around the player, duplicated passersby and unpainted white gaps, one obvious exit door opening into raw color, no readable text",
-    "sceneImageDirection": "4:5 cinematic narrative image, one immediate action, exact current event rather than cover motifs; Latent Layer uses black glass, white horizon, red cursor filament and unfinished picture windows, while portal worlds deliberately change medium and genre; no UI, logos, readable text or pseudo-writing",
-    "itemImageDirection": "museum-like generated artifact study against black glass with a thin red cursor filament, exact object state and wear, no people, UI, logos, readable text or pseudo-writing"
+    "sceneImageDirection": "4:5 cinematic narrative image, one immediate action, exact current event rather than cover motifs; the place outside pictures is a vast flat matte-black or deep-charcoal non-space with no floor, horizon, perspective or readable scale, using only disconnected luminous traces, incomplete contours and an occasional red filament; SUBJECT A is a recognizable weightless full-body figure 30–36% of frame height with controlled edge light preserving exact avatar silhouette, form, covering, costume, colors, patterns and accessories; large enough to read the avatar's complete identity but never a close-up, while dark negative space still dominates; near-white is reserved for explicit Smoother attacks; picture worlds deliberately change medium and genre; no UI, logos, readable text or pseudo-writing",
+    "itemImageDirection": "museum-like generated artifact study against a near-blank neutral field with one broken color scrap, exact object state and wear, no people, UI, logos, readable text or pseudo-writing"
   },
   "audio": {
     "mood": "dry electronic clicks, reversed pencil scratches, soft sub-bass drift in the hub, and sharply distinct short musical palettes for each picture world",
@@ -123,7 +123,7 @@
       "higher system trace",
       "a companion or route becomes separated rather than erased",
       "a memory or relationship is traded through the Undo Key",
-      "return to the Latent Layer with the failed world's consequences preserved"
+      "return to the blank outside pictures with the failed world's consequences preserved"
     ]
   }
 }

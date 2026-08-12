@@ -43,7 +43,7 @@ async function open(viewport) {
   await page.waitForSelector('.ct-stage')
   await page.waitForTimeout(450)
   await page.screenshot({ path: `${evidence}platform-layout-opening-decision-390x844.png`, fullPage: true })
-  await page.getByRole('button', { name: /抓住雨滴/ }).click()
+  await page.getByRole('button', { name: /碰一下眼前的雨滴/ }).click()
   await page.getByRole('button', { name: /查看下一步选择/ }).waitFor({ timeout: 8_000 })
   await page.screenshot({ path: `${evidence}platform-layout-first-result-390x844.png`, fullPage: true })
   await page.getByRole('button', { name: /查看下一步选择/ }).click()

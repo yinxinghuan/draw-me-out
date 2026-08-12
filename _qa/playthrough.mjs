@@ -27,17 +27,18 @@ async function choose(label) {
 }
 
 await page.getByRole('button', { name: /碰一下停在半空的雨/ }).click()
-await choose(/抓住雨滴/)
-await choose(/冲向那扇通往纯色的门/)
-await choose(/撕下门框边一枚发亮的按键/)
-await choose(/抓住从上方垂下的红色细线/)
-await choose(/沿红线寻找它的另一端/)
-await choose(/进入失重续费城/)
+await choose(/碰一下眼前的雨滴/)
+await choose(/跑向远处那扇门/)
+await choose(/直接跑向那扇门/)
+await choose(/拿走门框上的发亮按键/)
+await choose(/抓住那根红线/)
+await choose(/沿着红线往前摸/)
+await choose(/去救快飞走的送货员/)
 await choose(/抓住送货员和早餐箱/)
-await choose(/问残差为什么能看见我的选择/)
-await choose(/让残差继续读出屏幕外的东西/)
+await choose(/问小残回家还缺什么/)
+await choose(/让小残说它还看见什么/)
 
-await page.getByRole('button', { name: /把撤销键按进取景框/ }).click()
+await page.getByRole('button', { name: /不按选项，自己说要怎么做/ }).click()
 await page.waitForFunction(() => {
   const raw = localStorage.getItem('alteru:c699e284-58a9-43ca-8edf-223cd69588c9:draw-me-out-save')
   if (!raw) return false
