@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "projectId": "draw-me-out",
   "uuid": "c699e284-58a9-43ca-8edf-223cd69588c9",
-  "sourceCommit": "f65221a417d7468bc6f20aae2f443ba759889cb9",
+  "sourceCommit": "c7ce8f7",
   "buildCommand": "npm run build",
   "distPath": "dist",
   "posterPath": "public/poster.png",
@@ -10,13 +10,34 @@
   "tests": [
     "test:protocol",
     "test:danger",
-    "test:ending"
+    "test:ending",
+    "test:plain-language",
+    "test:image-queue",
+    "_qa/playthrough.mjs"
   ],
   "deployment": {
     "performed": true,
     "owner": "codex-publisher",
     "productionUrl": "https://game.aiwaves.tech/c699e284-58a9-43ca-8edf-223cd69588c9/",
     "mirrorUrl": "https://yinxinghuan.github.io/draw-me-out/",
-    "catalogCommit": "d0c19b4"
+    "catalogCommit": "d0c19b4",
+    "verifiedBundle": "assets/index-B1rXWdRP.js",
+    "verifiedAt": "2026-08-12"
+  },
+  "handoff": {
+    "currentState": "Production and GitHub Pages mirror both contain the scene-image queue recovery and character-debut fixes from c7ce8f7.",
+    "latestFixes": [
+      "The newest visible scene image is generated before older queued scenes, so rapid choices do not accumulate invisible image work ahead of the current loader.",
+      "An interrupted generating image is restored to queued on reload; each attempt has a 60-second cap and preserves its idempotent request id for recovery.",
+      "Little Remnant and Default Seven are hidden until a visible character_update or party_change introduces them.",
+      "Little Remnant now visibly appears as a nonhuman unfinished paper-bird creature, explains its name, and becomes the guide before any choice may address it.",
+      "AI-generated character debuts must follow visible form, name source, present relationship, then interaction choices."
+    ],
+    "saveCompatibility": "Existing saves remain compatible. A save already beyond Little Remnant's debut will not replay the rewritten introduction; use Restart to review it. Pre-debut legacy saves have incorrectly preloaded hidden characters removed during normalization.",
+    "nextChecks": [
+      "Test fast consecutive choices in the real AlterU WebView and confirm the current image finishes or exposes Retry within about 60 seconds.",
+      "Restart once and confirm Little Remnant is absent from the roster before its visible debut and present afterward.",
+      "Continue auditing later named characters so dialogue and choices never reference a name before a visible debut."
+    ]
   }
 }
