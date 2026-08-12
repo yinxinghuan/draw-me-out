@@ -18,7 +18,8 @@
 - `src/story/cartridges/drawMeOutCampaign.ts`：开场五幕与第一次图片世界往返的本地可玩切片。
 - `src/story/engine/reducer.ts`：唯一状态更新入口；维护物品、伙伴、地图、关系、事实、场景图和结局状态。
 - `src/story/engine/domainRules.ts`：自由文本意图匹配、前置条件裁判、原子效果、固定后续选择、派生线索事实与道具次数显示。
-- `src/story/engine/protocol.ts`：解析 `[choices]`、`[widget]`、`[inventory]`、`[fact]`、`[party_change]` 等结构化命令。
+- `src/story/engine/protocol.ts`：解析 `[choices]`、`[widget]`、`[inventory]`、`[fact]`、`[party_change]` 等结构化命令，并清除括号完整或缺失的 `image_prompt / image_subject` 传输元数据。
+- `src/story/engine/stageNarrative.ts`：从当前场景选择真正有信息量的情境字幕；过滤内部协议和“请做出选择 / What will you do next”类冗余元提示。
 - `src/story/engine/worldContext.ts`：把固定规则、章节目标、持久事实和近期故事压缩为 AI 上下文。
 - `src/story/engine/dangerDirector.ts`：2–4 安全回合、2 回合冷却、危险强度、检定和兜底代价。
 - `src/story/engine/imageDirector.ts`：每步图片调度、当前事件提示、封面描述隔离与玩家是否拥有视觉主动作判断。
@@ -43,7 +44,7 @@
 
 ### 状态与叙事循环
 
-`useStoryEngine` 持有当前存档，把玩家行动交给选定适配器，再通过 `parseStoryProtocol` 与 `applyParsedScene` 原子更新状态。界面阶段固定为 `decision → resolving → result → decision`：提交后立即隐藏旧问题与选项，文字结果不等待图片，结果确认后才出现下一组选择。解析异常时会恢复至少两个与当前叙述相关的行动，不能退化成单一“继续”。
+`useStoryEngine` 持有当前存档，把玩家行动交给选定适配器，再通过 `parseStoryProtocol` 与 `applyParsedScene` 原子更新状态。界面阶段固定为 `decision → resolving → result → decision`：提交后立即隐藏旧问题与选项，文字结果不等待图片，结果确认后才出现下一组选择。决策阶段字幕是条件元素：只有新情境、必要后果或人物对白才显示；选项已经足够说明动作时可完全没有字幕卡。旧存档中遗留的图片协议文本会在规范化时清除。解析异常时会恢复至少两个与当前叙述相关的行动，不能退化成单一“继续”。
 
 世界状态包括三项数值、自定义事实、地图、行囊、固定/生成角色、队伍 ID、关系事件、危险周期、图片块和结局快照。角色 ID、物品 ID 与地图节点跨语言共用；中英文仅改变可见文案。
 
@@ -90,7 +91,7 @@
 - 增加图片世界：在 cartridge 的章节/地图/生成规则中定义稳定矛盾，并为切片增加 3–5 个有后果的步骤；图片提示只描述当前事件。
 - 调整头像身份合同或主动作判断：编辑 `src/story/engine/imageIdentity.ts`、`imageDirector.ts` 和 cartridge 的 `playerImageRole/playerImageExclusions`，并重新运行普通头像与无脸非人测试图验证。
 - 调整图片尺寸、频率、队列优先级或启用里程碑视频：修改 cartridge 的 `imageDirector/mediaDirector` 与 `useStoryEngine.ts`；队列改动必须运行 `npm run test:image-queue`。视频启用前必须提供真实 9:16 首尾帧、5 秒动作和声音提示，不能拉伸 4:5 图片。
-- 改 UI 排序、阶段或抽屉：编辑 `StoryShell.tsx`；改视觉 token、短屏高度、按钮和分页行为编辑 `story.less`。
+- 改 UI 排序、阶段或抽屉：编辑 `StoryShell.tsx`；改字幕价值判断编辑 `engine/stageNarrative.ts` 并运行 `npm run test:stage-narrative`；改视觉 token、短屏高度、按钮和分页行为编辑 `story.less`。
 - 改文字、语言检测和系统提示：编辑 `src/story/i18n.ts`；剧情双语文案仍放在 cartridge/campaign。
 - 改音色、BPM、张力权重：先修改 cartridge 的 `audioTheme`，需要新合成手法时再改 `src/story/audio/`。
 - 改媒体或存档后端：只修改 `src/shared/runtime/media.ts` 或 `src/shared/save/useGameSave.ts` 的稳定平台合同；游戏代码中不得出现模型提供商地址、密钥或私有部署逻辑。

@@ -16,7 +16,8 @@
     "test:plain-language": "TMPDIR=/private/tmp tsx _qa/plain-language.ts",
     "test:character-debut": "TMPDIR=/private/tmp tsx _qa/plain-language.ts",
     "test:image-queue": "TMPDIR=/private/tmp tsx _qa/image-queue.ts",
-    "test:domain": "TMPDIR=/private/tmp tsx _qa/domain-rules.ts"
+    "test:domain": "TMPDIR=/private/tmp tsx _qa/domain-rules.ts",
+    "test:stage-narrative": "TMPDIR=/private/tmp tsx _qa/stage-narrative.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

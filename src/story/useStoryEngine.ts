@@ -7,7 +7,7 @@ import { mockAdapter } from './adapters/mock'
 import { remoteAdapter } from './adapters/remote'
 import { resolveCartridge } from './cartridges'
 import { applyParsedScene, createImageBlock, createInitialSave, createRecoveryChoices, localizeKnownState, normalizeCharacterState, updateImageBlock, updateInventoryItemImage } from './engine/reducer'
-import { parseStoryProtocol } from './engine/protocol'
+import { isProtocolResidueText, parseStoryProtocol } from './engine/protocol'
 import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
@@ -104,7 +104,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   // `generating` only means that this browser tab owned an in-memory request.
   // That promise cannot survive a reload, background WebView eviction or a
   // resumed cloud save, so every orphaned state must re-enter the queue.
-  let blocks = recoverInterruptedImageStates(repaired.blocks)
+  let blocks = recoverInterruptedImageStates(repaired.blocks).filter((block) => !isProtocolResidueText(block.text))
   if (!blocks.some((block) => block.kind === 'image')) {
     const legacyPrompt = repaired.imagePrompt?.trim() ?? ''
     const canRestoreImage = repaired.scene === 0 || Boolean(legacyPrompt || repaired.imageUrl)
