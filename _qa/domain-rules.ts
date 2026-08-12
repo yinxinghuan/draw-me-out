@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { drawMeOut, drawMeOutEn } from '../src/story/cartridges/drawMeOut'
 import { applyDomainResolution, resolveDomainAction, syncDomainDerivedState } from '../src/story/engine/domainRules'
 import { parseStoryProtocol } from '../src/story/engine/protocol'
-import { applyParsedScene, createInitialSave } from '../src/story/engine/reducer'
+import { applyParsedScene, createInitialSave, enterStory } from '../src/story/engine/reducer'
 import type { StorySave } from '../src/story/types'
 
 const hostile = (locale: 'zh' | 'en') => parseStoryProtocol(`The model tries to seize the turn.
@@ -17,7 +17,7 @@ const hostile = (locale: 'zh' | 'en') => parseStoryProtocol(`The model tries to 
 [session_end: reason="hostile model ended the game"]
 [choices: "Wrong one"|"Wrong two"|"Wrong three"]`, locale)
 
-let save = createInitialSave(drawMeOut)
+let save = enterStory(createInitialSave(drawMeOut), drawMeOut)
 
 function governed(action: string): { save: StorySave; status: 'accepted' | 'rejected'; ruleId: string } {
   const resolution = resolveDomainAction(save, drawMeOut, action)
@@ -30,25 +30,27 @@ function governed(action: string): { save: StorySave; status: 'accepted' | 'reje
 
 assert.equal(save.facts['home-clue-count'], 0)
 assert.equal(save.facts['coordinates-four'], false)
+assert.equal(save.facts['rain-is-pixels'], true)
+assert.equal(save.stats.compute, 61)
 assert.equal(resolveDomainAction(save, drawMeOut, '随便看看街边招牌'), undefined)
 
+governed('叫住换脸的路人')
 let result = governed('拿走门框上的发亮按键')
 assert.equal(result.status, 'accepted')
 assert.equal(result.ruleId, 'acquire-undo-key')
 assert.equal(save.inventory.find((item) => item.id === 'undo-key')?.count, 1)
 assert.equal(save.inventory.find((item) => item.id === 'undo-key')?.metrics?.find((metric) => metric.id === 'remaining-uses')?.value, '3')
 assert.equal(save.inventory.some((item) => item.id === 'fake-clue'), false)
-assert.equal(save.stats.self, 82)
-assert.equal(save.stats.compute, 65)
+assert.equal(save.stats.self, 79)
+assert.equal(save.stats.compute, 61)
 assert.equal(save.facts['coordinates-four'], false)
 assert.equal(save.sessionEnded, false)
-assert.deepEqual(save.choices.map((choice) => choice.label), ['握紧撤销键', '抓住那根红线', '大声喊有没有人'])
+assert.deepEqual(save.choices.map((choice) => choice.label), ['沿着红线往前摸', '伸手碰最近的颜色碎片', '再喊一次有没有人'])
 
 result = governed('拿走门框上的发亮按键')
 assert.equal(result.status, 'rejected')
 assert.equal(save.inventory.find((item) => item.id === 'undo-key')?.count, 1)
 
-governed('握紧撤销键')
 assert.equal(save.map.find((node) => node.current)?.id, 'latent-zero')
 assert.equal(save.time, '没有时间 · 第一次坠落')
 
@@ -64,7 +66,7 @@ assert.equal(save.partyMemberIds.filter((id) => id === 'residual').length, 1)
 governed('去救快飞走的送货员')
 assert.equal(save.facts['first-world-route'], 'flying-city')
 assert.equal(save.map.find((node) => node.current)?.id, 'flying-city-rope-street')
-assert.equal(save.stats.compute, 59)
+assert.equal(save.stats.compute, 55)
 assert.equal(save.characters.some((character) => character.id === 'default-seven'), false)
 
 governed('告诉收费塔早餐属于公共服务')
@@ -73,8 +75,10 @@ assert.equal(save.inventory.find((item) => item.id === 'coordinate-weight')?.cou
 assert.equal(save.facts['home-clue-count'], 1)
 assert.equal(save.facts['first-coordinate-earned'], true)
 assert.equal(save.facts['coordinates-four'], false)
-assert.equal(save.stats.self, 87)
-assert.equal(save.stats.trace, 26)
+assert.equal(save.facts['weight-method'], 'public-service')
+assert.equal(save.facts['public-gravity-precedent'], true)
+assert.equal(save.stats.self, 83)
+assert.equal(save.stats.trace, 37)
 
 result = governed('告诉收费塔早餐属于公共服务')
 assert.equal(result.status, 'rejected')
@@ -106,7 +110,7 @@ assert.equal(save.facts['undo-key-uses'], 1)
 assert.equal(save.facts['rain-is-pixels'], false)
 assert.equal(save.facts['undo-cost-rain-spent'], true)
 assert.equal(save.inventory.find((item) => item.id === 'undo-key')?.metrics?.find((metric) => metric.id === 'remaining-uses')?.value, '2')
-assert.equal(save.stats.trace, 8)
+assert.equal(save.stats.trace, 19)
 assert.equal(save.danger.phase, 'calm')
 assert.equal(save.sessionEnded, true)
 

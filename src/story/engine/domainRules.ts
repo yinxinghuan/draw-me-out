@@ -175,6 +175,17 @@ export function applyDomainResolution(save: StorySave, cartridge: StoryCartridge
       }
       target.updatedAtScene = save.scene
     }
+    if (effect.type === 'character') {
+      const definition = cartridge.characters.find((entry) => entry.id === effect.characterId)
+      if (!definition || save.characters.some((entry) => entry.id === effect.characterId)) return
+      save.characters.push({
+        ...definition,
+        skills: definition.skills.map((skill) => ({ ...skill })),
+        status: 'known',
+        origin: 'cartridge',
+        updatedAtScene: save.scene,
+      })
+    }
     if (effect.type === 'map') {
       const target = save.map.find((node) => node.id === effect.nodeId)
       if (!target) return
@@ -194,7 +205,7 @@ export function applyDomainResolution(save: StorySave, cartridge: StoryCartridge
     }
   })
   syncDomainDerivedState(save, cartridge)
-  blocks.push({ id: `domain-${save.scene}`, kind: 'event', text: resolution.successText, data: { domainRule: resolution.ruleId, domainStatus: 'accepted' } })
+  blocks.push({ id: `domain-${save.scene}`, kind: 'narration', text: resolution.successText, data: { domainRule: resolution.ruleId, domainStatus: 'accepted' } })
   return blocks
 }
 

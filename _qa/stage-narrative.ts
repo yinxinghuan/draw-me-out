@@ -14,5 +14,8 @@ assert.equal(selectStageOverlay([{ id: 'prompt', kind: 'narration', text: '接�
 assert.equal(selectStageOverlay([{ id: 'prompt', kind: 'narration', text: 'What will you do next?' }], 'decision'), undefined)
 assert.equal(selectStageOverlay([{ id: 'prompt', kind: 'narration', text: 'Please choose an action.' }], 'decision'), undefined)
 assert.equal(selectStageOverlay([{ id: 'context', kind: 'narration', text: '左边的路正在褪色，右边传来小残的呼救。' }], 'decision')?.id, 'context')
+const governedResult: StoryBlock = { id: 'domain-1', kind: 'narration', text: '你已经看过的行动结果。', data: { domainStatus: 'accepted' } }
+assert.equal(selectStageOverlay([governedResult], 'result')?.id, 'domain-1')
+assert.equal(selectStageOverlay([governedResult], 'decision'), undefined, 'governed result must not repeat above its next choices')
 
-console.log(JSON.stringify({ ok: true, protocolLeakHidden: true, redundantPromptHidden: true, contextKept: true }))
+console.log(JSON.stringify({ ok: true, protocolLeakHidden: true, redundantPromptHidden: true, contextKept: true, governedResultNotRepeated: true }))

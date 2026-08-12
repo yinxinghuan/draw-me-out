@@ -31,5 +31,8 @@ export function selectStageOverlay(blocks: StoryBlock[], phase: StageNarrativePh
   const story = stageNarrativeBlocks(blocks)
   if (!story.length) return undefined
   if (preview || phase !== 'decision') return story[0]
-  return story.at(-1)
+  // A governed action's success narration has already occupied the result tray.
+  // Repeating it as decision context makes the player reread the same beat and
+  // can reveal choices before a multi-page duplicate is finished.
+  return story.filter((block) => block.data?.domainStatus !== 'accepted').at(-1)
 }

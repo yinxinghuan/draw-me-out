@@ -9,7 +9,7 @@
 
 ## Executive assessment
 
-- Decision：Pass。
+- Decision：Pass；2026-08-12 开场因果与状态渐进揭示改造已在真实 390×844、320×568 视口复验。
 - Strongest quality：黑框、骨白纸面与校准蓝形成稳定取景器；画面、此刻文字与行动按阶段接力，不再同时堆叠。
 - Largest remaining risk：正式运行时生成图仍取决于媒体服务和用户头像质量，需要在线上以普通真人头像和完整遮脸非人头像各复验一次身份连续性。
 - P0 / P1：0 / 0。
@@ -27,6 +27,15 @@
 | Polish | 4.6 | 可选项蓝边与实阴影、结果自适应高度、统一 SVG 控件 | 后续只为重大坐标奖励增加全屏反馈 |
 
 Final average：4.60 / 5；无类别低于 4。
+
+### 2026-08-12 matched recheck
+
+- `platform-layout-first-result-320x568.png`：入口一次点击后只显示“余力”，直接结果可读，旧选择与自由输入均不存在。
+- `platform-layout-opening-decision-320x568.png`：结果确认后才出现三项具体行动，无冗余情境卡和横向页面溢出。
+- `platform-layout-second-decision-390x844.png`：四页人物情境在最后一页才开放选择，之前不显示自由输入。
+- `caption-visibility/01-*.png`：受管结果不在下一决策屏重复，也不出现“请做出选择”或图片协议。
+- `caption-visibility/02-*.png`：自由行动返回真正有信息量的情境时，字幕卡正常存在；390×844 与 320×568 均可达。
+- P0 / P1：0 / 0。
 
 ## Iteration findings and fixes
 

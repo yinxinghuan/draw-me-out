@@ -9,7 +9,7 @@ await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch({ headless: true })
 
 async function open(viewport) {
-  const context = await browser.newContext({ viewportSize: viewport, deviceScaleFactor: 1 })
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1 })
   const page = await context.newPage()
   await page.route('**/alteru-media/api/v1/images/generations', async (route) => {
     const body = route.request().postDataJSON()
@@ -41,13 +41,24 @@ async function open(viewport) {
   await page.screenshot({ path: `${evidence}platform-layout-entry-390x844.png`, fullPage: true })
   await page.getByRole('button', { name: /碰一下停在半空的雨/ }).click()
   await page.waitForSelector('.ct-stage')
-  await page.waitForTimeout(450)
-  await page.screenshot({ path: `${evidence}platform-layout-opening-decision-390x844.png`, fullPage: true })
-  await page.getByRole('button', { name: /碰一下眼前的雨滴/ }).click()
-  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor({ timeout: 8_000 })
+  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor()
+  if (await page.locator('.st-composer').count()) throw new Error('Composer appeared before the opening result was acknowledged')
+  if (await page.getByRole('button', { name: /碰.*雨/ }).count()) throw new Error('touch-rain action was duplicated after entry')
   await page.screenshot({ path: `${evidence}platform-layout-first-result-390x844.png`, fullPage: true })
   await page.getByRole('button', { name: /查看下一步选择/ }).click()
-  await page.waitForTimeout(250)
+  await page.getByRole('button', { name: /叫住换脸的路人/ }).waitFor()
+  if (await page.locator('.st-chat-stat').count() !== 1) throw new Error('only Strength should be visible after the first causal reveal')
+  await page.screenshot({ path: `${evidence}platform-layout-opening-decision-390x844.png`, fullPage: true })
+  await page.getByRole('button', { name: /叫住换脸的路人/ }).click()
+  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor({ timeout: 8_000 })
+  await page.getByRole('button', { name: /查看下一步选择/ }).click()
+  const openingPager = page.locator('.ct-stage__caption-page')
+  if (await openingPager.count()) {
+    if (await page.locator('.st-composer').count()) throw new Error('Composer appeared before all opening context pages were read')
+    while (!(await openingPager.locator('span').textContent())?.match(/(\d+)\/\1/)) await openingPager.click()
+  }
+  await page.getByRole('button', { name: /拿走门框上的发亮按键/ }).waitFor()
+  if (await page.locator('.st-chat-stat').count() !== 2) throw new Error('Detected should appear after the street notices the player')
   await page.screenshot({ path: `${evidence}platform-layout-second-decision-390x844.png`, fullPage: true })
   await context.close()
 }
@@ -56,7 +67,12 @@ async function open(viewport) {
   const { context, page } = await open({ width: 320, height: 568 })
   await page.getByRole('button', { name: /碰一下停在半空的雨/ }).click()
   await page.waitForSelector('.ct-stage')
-  await page.waitForTimeout(350)
+  await page.getByRole('button', { name: /查看下一步选择/ }).waitFor()
+  if (await page.locator('.st-composer').count()) throw new Error('narrow Composer appeared before opening result acknowledgement')
+  await page.screenshot({ path: `${evidence}platform-layout-first-result-320x568.png`, fullPage: true })
+  await page.getByRole('button', { name: /查看下一步选择/ }).click()
+  await page.getByRole('button', { name: /叫住换脸的路人/ }).waitFor()
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('opening decision overflows at 320x568')
   await page.screenshot({ path: `${evidence}platform-layout-opening-decision-320x568.png`, fullPage: true })
   await context.close()
 }
@@ -68,7 +84,7 @@ async function open(viewport) {
 }
 
 {
-  const context = await browser.newContext({ viewportSize: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
   const page = await context.newPage()
   await page.addInitScript(() => { localStorage.clear(); localStorage.setItem('game_locale', 'zh') })
   await page.goto(base, { waitUntil: 'networkidle' })
