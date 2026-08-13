@@ -8,7 +8,7 @@ import { remoteAdapter } from './adapters/remote'
 import { resolveCartridge } from './cartridges'
 import { applyParsedScene, createImageBlock, createInitialSave, createRecoveryChoices, enterStory, localizeKnownState, normalizeCharacterState, updateImageBlock, updateInventoryItemImage } from './engine/reducer'
 import { isProtocolResidueText, parseStoryProtocol } from './engine/protocol'
-import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradeAuthoredOpeningSnapshots, upgradePendingSceneImagePrompts } from './engine/imageDirector'
+import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradeAuthoredOpeningSnapshots, upgradeCurrentCampaignImage, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
 import { buildDangerDirective, normalizeDangerState } from './engine/dangerDirector'
 import { resolveDomainAction, syncDomainDerivedState } from './engine/domainRules'
@@ -162,7 +162,13 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   if (!normalized.sessionEnded && normalized.choices.length < 2) normalized.choices = createRecoveryChoices(normalized, cartridge)
   const undoKey = normalized.inventory.find((item) => item.id === 'undo-key')
   if (undoKey && undoKey.count > 0) undoKey.count = 1
-  return upgradePendingSceneImagePrompts(upgradeAuthoredOpeningSnapshots(syncDomainDerivedState(normalized, cartridge), cartridge), cartridge)
+  return upgradeCurrentCampaignImage(
+    upgradePendingSceneImagePrompts(
+      upgradeAuthoredOpeningSnapshots(syncDomainDerivedState(normalized, cartridge), cartridge),
+      cartridge,
+    ),
+    cartridge,
+  )
 }
 
 function inventoryImagePrompt(item: InventoryItem, cartridge: StoryCartridge): string {

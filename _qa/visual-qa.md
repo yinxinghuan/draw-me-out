@@ -7,14 +7,14 @@
 - 需求与视觉文档：`doc/requirements.md`、`doc/visual.md`。
 - 视口：390×844、320×568、1366×768；平台内构图为主，另保留外部访客栏检查。
 - 运行证据：`_qa/ui/campaign-director/01-opening-result-platform-layout-*.png`、`02-remnant-decision-platform-layout-*.png`、`03-museum-entry-platform-layout-*.png`、`04-museum-clue-platform-layout-*.png`、`05-boundless-return-platform-layout-*.png`、`06-fourth-clue-platform-layout-*.png`、`07-four-anchors-platform-layout-*.png`、`08-finale-ready-platform-layout-*.png`。
-- 真实媒体服务样张：`latent-art-direction-sample.png` 至 `latent-art-direction-sample-v5.png`。
+- 真实媒体服务样张：`latent-art-direction-sample.png` 至 `latent-art-direction-sample-v5.png`，以及 `_qa/ui/semantic-cohort-v11/` 三张后半段语义抽样与 `report.json`。
 
 ## Executive assessment
 
-- 结论：390×844 与 320×568 均从开场连续完成 27 个受管回合、四个世界、四次独立返回、四次重载和终局闸门；每个多页结果在末页前均未暴露主 CTA，小残决策态同时出现因果短句与可识别入口。四次返回快照都固定 `latent-zero`、中央红线环、四锚位方位和同一正面镜位；正式头像与锚位成图仍需在线上真实媒体结果中复验。
+- 结论：390×844 与 320×568 均从开场连续完成 27 个受管回合、四个世界、四次独立返回、四次重载和终局闸门；每个多页结果在末页前均未暴露主 CTA。后半段三张正式媒体抽样分别建立博物馆、会议室和飞城，均无雨街/水滴残留；只有飞城玩家动作镜携带身份参考。四次返回快照继续固定 `latent-zero`、中央红线环、四锚位方位和同一正面镜位。
 - 最强质量：黑色非空间已没有地面、地平线、透视或房间感；30–36% 全身人物兼顾身份可读性与大面积负空间。
 - 说明：v5 使用无身份参考的通用人物，仅验证比例、姿态、背景与抽象痕迹，不能作为用户头像一致性的证据。
-- P0/P1/P2：0 / 0 / 1。玩家反馈揭示了“线索结算、返回和下一门被压成同一回合”的 P1 空间跳切；现已拆成 `clue → return → hub`，并在两种视口完整复跑通过。
+- P0/P1/P2：0 / 0 / 1。新增发现的 P1 是后半段头像参考滥用与跨世界旧图保留；已用镜头方案 v2、提示版本 11、按 `locationId` 限制上一镜和当前帧存档迁移修复，并以三张真实生成像素复验。
 
 ## Scorecard
 
@@ -64,6 +64,7 @@
 - v4：侧向失重成立，但近白背景与 UI 接近，人物仍过小。
 - v5：平坦深黑非空间、无地面/投影，人物约 34% 全身，身份细节在构图层面可读，同时保留大面积负空间。作为当前 matched recheck。
 - 全局 recheck：结果页脚本先断言“继续阅读”与主 CTA 不得同时可用，再逐页读完；27 回合、4 次刷新、四条稳定线索与 27 份权威视觉快照在 390×844 和 320×568 均通过。每条线索揭示后脚本确认当前地图仍是原世界、阶段为 `return` 且按钮中不存在下一世界入口；执行返回后才确认地图切到 `latent-zero`、`hubReturnCount` 增加、固定红线环/四锚位快照出现并开放下一门。小残选择态的“眼前”短句继续明确说明三道裂缝、无法结束的画和回家线索。
+- 像素 recheck：博物馆进入镜和会议结果镜均以 `text` 模式、零头像参考生成；飞城玩家动作镜以 `edit` 模式、单一参考生成。人工逐张核对地点、主体、动作、关键道具与雨城残留，三张均通过；自动桩不再被当成图片一致性证据。
 
 ## Final recommendation
 

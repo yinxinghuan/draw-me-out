@@ -9,6 +9,7 @@ interface EpisodeStep {
   facts: [string, string, string]
   effects: [DomainEffect[], DomainEffect[], DomainEffect[]]
   visualActions: [string, string, string]
+  playerOwnedShots: [boolean, boolean, boolean]
 }
 
 interface CampaignEpisode {
@@ -124,7 +125,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           s('你接住早餐箱，手臂猛地向街面一沉。送货员本人继续上升：箱子有公共配送许可，人却没有。', 'You catch the breakfast box and your arm drops hard toward the street. The courier keeps rising: the delivery has public clearance, the person does not.'),
         ],
         facts: ['flying-entry-rope', 'flying-entry-tower', 'flying-entry-breakfast'], effects: none,
-        visualActions: ['SUBJECT A braces on a safety rope while the courier rises', 'SUBJECT A watches the billing tower remove gravity in visible pulses', 'SUBJECT A catches the weighted breakfast box as its courier rises away'],
+        visualActions: ['SUBJECT A braces on a safety rope while the courier rises', 'the brass billing tower removes gravity in visible pulses while one airborne courier reaches for a safety rope', 'SUBJECT A catches the weighted breakfast box as its courier rises away'],
+        playerOwnedShots: [true, false, true],
       },
       problem: {
         choices: [s('亲手把送货员拽下来', 'Pull the courier down by hand'), s('让小残卡住收费轮', 'Let Little Remnant jam the billing wheel'), s('宣布早餐配送属于公共服务', 'Declare breakfast delivery a public service')],
@@ -139,7 +141,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           [{ type: 'stat', id: 'trace', delta: 7 }, { type: 'fact', id: 'residual-took-gravity-risk', value: true }],
           [{ type: 'stat', id: 'trace', delta: 12 }, { type: 'fact', id: 'public-gravity-precedent', value: true }],
         ],
-        visualActions: ['SUBJECT A hauls the courier down against upward pull', 'Little Remnant jams the brass wheel while SUBJECT A catches the courier', 'SUBJECT A addresses the billing tower as the entire street lands together'],
+        visualActions: ['SUBJECT A hauls the courier down against upward pull', 'Little Remnant jams the brass wheel while the airborne courier catches one safety rope', 'the gravity tower accepts public-service status and the entire street lands together'],
+        playerOwnedShots: [true, false, false],
       },
       resolutionChoices: [s('让送货员自己站稳', 'Let the courier stand unaided'), s('请整条街一起接住他', 'Have the whole street catch the courier'), s('把公共落地规则留给这里', 'Leave the public-ground rule behind')],
       resolutionResults: [
@@ -165,7 +168,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           s('最新牢房里没有囚犯，只有一块写错后被迫长成人形的影子。错误称呼会先制造一个人，再惩罚那个人。', 'The newest prison holds no prisoner, only a shadow forced into a person by a wrong name. The realm creates someone before punishing them.'),
           s('国王闭口，天空却用雷声继续替他说。王冠中央有一块透明缺口，只有真正的沉默靠近时才会发亮。', 'The king closes his mouth, but thunder continues for him. A transparent gap in the crown glows only when real silence approaches.'),
         ], facts: ['words-entry-listen', 'words-entry-prison', 'words-entry-silence'], effects: none,
-        visualActions: ['SUBJECT A listens as a word ribbon stops above the king', 'SUBJECT A opens an empty prison grown from a wrong name', 'SUBJECT A shelters the silent king while thunder tries to finish the sentence'],
+        visualActions: ['the exhausted king holds his breath as a physical word ribbon stops above his crown', 'an empty prison grown from a wrong name opens while its nameless occupant steps out', 'the silent king crouches beneath his crown while thunder tries to finish the sentence'],
+        playerOwnedShots: [false, false, false],
       },
       problem: {
         choices: [s('把加冕词改成一个问题', 'Turn the coronation into a question'), s('让小残咬掉最后一个词', 'Let Little Remnant bite off the last word'), s('说出一个不存在的名字', 'Speak a name that does not exist')],
@@ -179,7 +183,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           [{ type: 'stat', id: 'trace', delta: 7 }, { type: 'fact', id: 'residual-defied-prophecy', value: true }],
           [{ type: 'stat', id: 'self', delta: -4 }, { type: 'stat', id: 'trace', delta: 10 }],
         ],
-        visualActions: ['SUBJECT A turns the physical sentence ribbon into an open question', 'Little Remnant bites the final word from the ribbon beside SUBJECT A', 'SUBJECT A speaks toward a blank human-shaped absence while the sentence stops'],
+        visualActions: ['SUBJECT A turns the physical sentence ribbon into an open question', 'Little Remnant bites the final word from the ribbon while the king holds its other end', 'SUBJECT A speaks toward a blank human-shaped absence while the sentence stops'],
+        playerOwnedShots: [true, false, true],
       },
       resolutionChoices: [s('请国王亲手留下空位', 'Ask the king to preserve the blank'), s('先放出那些错误名字', 'Release the people made by wrong names'), s('让全城练习一句沉默', 'Let the city practice one silence')],
       resolutionResults: [
@@ -204,7 +209,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           s('黎姨把七副磨破的手套排开，每副都写着同一个星期一。会议不是没有时间，而是不肯承认时间已经过去。', 'Auntie Li lays out seven worn pairs of gloves, each marked with the same Monday. Time passed; the meeting refuses to admit it.'),
           s('桌上有二千多个咖啡圈，最外圈已经长出纸一样的年轮。所有人只记得当前幻灯片，没人记得自己曾经想走。', 'More than two thousand coffee rings cover the table, the oldest growing paper-like rings. Everyone remembers the slide, not that they once wanted to leave.'),
         ], facts: ['meeting-entry-projector', 'meeting-entry-gloves', 'meeting-entry-coffee'], effects: none,
-        visualActions: ['SUBJECT A holds the unplugged projector cable while the blank screen stays lit', 'Auntie Li lays seven dated work gloves before SUBJECT A', 'SUBJECT A traces thousands of coffee rings while workers repeat one pose'],
+        visualActions: ['SUBJECT A holds the unplugged projector cable while the blank screen stays lit', 'Auntie Li lays seven dated work gloves across the meeting table', 'thousands of coffee rings spread across the table while the workers repeat one frozen pose'],
+        playerOwnedShots: [true, false, false],
       },
       problem: {
         choices: [s('拔掉那台没接电的投影仪', 'Unplug the projector with no cable'), s('让黎姨问谁真的有话要说', 'Ask Auntie Li who truly needs to speak'), s('举手提议现在就散会', 'Raise a hand and end the meeting now')],
@@ -219,6 +225,7 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           [{ type: 'stat', id: 'self', delta: 5 }, { type: 'stat', id: 'trace', delta: 10 }],
         ],
         visualActions: ['SUBJECT A pulls an impossible cable and the projector goes dark', 'Auntie Li blocks the table with her mop as every hand stays down', 'SUBJECT A raises one hand while the entire meeting stands to leave'],
+        playerOwnedShots: [true, false, true],
       },
       resolutionChoices: [s('让最后一个人先走出门', 'Let the last worker leave first'), s('请黎姨亲手关掉会议室', 'Ask Auntie Li to close the room'), s('把“散会”留在最后一页', 'Leave “adjourned” in the final slide')],
       resolutionResults: [
@@ -243,7 +250,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           s('针孔组成十几个不同姓名牌的轮廓。博物馆每天替梁叔换一种身份，只有侧门钥匙上的磨痕始终属于同一只手。', 'The pinholes outline many different nameplates. The museum assigns Liang a new identity daily; only wear on the side-door keys belongs to the same hand.'),
           s('“展品、保安、背景、无人认领。”梁叔逐个说出旧称呼，却能准确复述每个获救游客的样子。博物馆记得标签，他记得人。', '“Exhibit, guard, background, unclaimed.” Liang lists old labels, then accurately recalls every visitor he saved. The museum remembers labels; he remembers people.'),
         ], facts: ['museum-entry-block', 'museum-entry-pinholes', 'museum-entry-names'], effects: none,
-        visualActions: ['SUBJECT A shields Uncle Liang from one flying blank label frame', 'SUBJECT A examines layers of nameplate pinholes on the indigo uniform', 'Uncle Liang recalls visitors while blank label frames circle SUBJECT A'],
+        visualActions: ['SUBJECT A shields Uncle Liang from one flying blank label frame', 'a close detail reveals layers of empty nameplate pinholes on Uncle Liang’s indigo uniform', 'Uncle Liang recalls rescued visitors while blank label frames circle him'],
+        playerOwnedShots: [true, false, false],
       },
       problem: {
         choices: [s('让梁叔描述真正的你', 'Ask Uncle Liang to describe the real you'), s('把所有说明牌转向空墙', 'Turn every label toward a blank wall'), s('用侧门钥匙交换姓名牌', 'Trade the side-door keys for the nameplates')],
@@ -257,7 +265,8 @@ function episodes(locale: Locale): Record<CampaignEpisodeId, CampaignEpisode> {
           [{ type: 'stat', id: 'compute', delta: -6 }, { type: 'stat', id: 'trace', delta: 8 }],
           [{ type: 'stat', id: 'self', delta: 4 }, { type: 'fact', id: 'liang-keys-remember', value: true }],
         ],
-        visualActions: ['Uncle Liang points out exact lived details while SUBJECT A remains unchanged', 'SUBJECT A turns flying blank label frames toward one empty wall', 'Uncle Liang places worn keys beside failed nameplates as SUBJECT A watches'],
+        visualActions: ['Uncle Liang points out exact lived details while every blank frame fails to attach', 'SUBJECT A turns flying blank label frames toward one empty wall', 'Uncle Liang places worn keys beside the failed nameplates'],
+        playerOwnedShots: [false, true, false],
       },
       resolutionChoices: [s('请梁叔保留一块空说明牌', 'Ask Liang to keep one label blank'), s('让获救游客互相叫出名字', 'Have the rescued visitors name one another'), s('把你的行动留在访客簿里', 'Leave your action in the visitor record')],
       resolutionResults: [
@@ -359,6 +368,7 @@ function hubAnchorProps(completed: CampaignEpisodeId[], latest: CampaignEpisodeI
 
 function hubReturnVisual(locale: Locale, episode: CampaignEpisode, completed: CampaignEpisodeId[], action: string, result: string): StoryVisualBeat {
   return {
+    planVersion: 2,
     locationId: 'latent-zero',
     location: locale === 'zh' ? '画外之地 · 无边处' : 'Outside the Pictures · The Boundless',
     episodeId: episode.id,
@@ -369,6 +379,7 @@ function hubReturnVisual(locale: Locale, episode: CampaignEpisode, completed: Ca
     subjects: ['SUBJECT A', 'Little Remnant'],
     props: [...hubAnchorProps(completed, episode.id), episode.visualReturnTrace],
     environment: 'the same fixed transit composition on every return: vast matte near-black non-space, a thin red-filament ring centered in frame, four anchor positions forming an unmoving diamond around it, no floor, horizon, architecture or readable distance',
+    camera: 'fixed frontal wide-medium shot, identical lens, subject scale and central ring placement on every Boundless return',
     lighting: 'controlled soft edge light; the newly filled anchor is brightest, older filled anchors remain dim and steady, unfinished anchors are outline-only',
     continuity: [
       'use the same frontal camera, central red-filament ring, diamond layout and scale on every return to the Boundless',
@@ -382,8 +393,36 @@ function hubReturnVisual(locale: Locale, episode: CampaignEpisode, completed: Ca
   }
 }
 
-function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], action: string, result: string, visualAction: string, playerVisible: boolean): StoryVisualBeat {
+function visualTokens(value: string): Set<string> {
+  return new Set(value.toLowerCase().match(/[a-z][a-z-]{3,}/g) ?? [])
+}
+
+function relevantProps(episode: CampaignEpisode, visualAction: string, result: string): string[] {
+  const source = visualTokens(`${visualAction} ${result}`)
+  const selected = episode.props.filter((prop) => [...visualTokens(prop)].some((token) => source.has(token)))
+  return (selected.length ? selected : episode.props.slice(0, 1)).slice(0, 2)
+}
+
+function cameraFor(phase: StoryVisualBeat['shot'], index: number, playerVisible: boolean): string {
+  if (phase === 'arrival') return 'wide oblique establishing shot led by the world rule and the endangered local person; no portrait pose and no opening-city composition'
+  if (phase === 'clue') return 'object-forward medium close-up led by the local witness and the newly earned clue; the player is off camera'
+  const playerShots = [
+    'dynamic medium-long action shot with the player below the upper third and the world mechanism dominating the frame',
+    'side-on medium action shot centered on contact between the player action and one concrete prop',
+    'high or low three-quarter action shot with strong environmental scale and no portrait framing',
+  ]
+  const otherShots = [
+    'tight environmental detail shot with the world mechanism as the focal subject and no player portrait',
+    'medium shot led by the named local character performing the decisive action; the player remains off camera',
+    'wide consequence shot showing a group or environment changing together; no individual player portrait',
+  ]
+  return (playerVisible ? playerShots : otherShots)[index % 3]
+}
+
+function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], action: string, result: string, visualAction: string, playerVisible: boolean, index = 0): StoryVisualBeat {
+  const localSubjects = episode.subjects.filter((subject) => subject !== 'SUBJECT A')
   return {
+    planVersion: 2,
     locationId: phase === 'return' ? 'latent-zero' : episode.mapId,
     location: phase === 'return' ? 'Outside the Pictures · The Boundless' : episode.title,
     episodeId: episode.id,
@@ -391,9 +430,10 @@ function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], ac
     shot: phase,
     action: visualAction || action,
     result,
-    subjects: phase === 'return' ? ['SUBJECT A', 'Little Remnant'] : episode.subjects,
-    props: phase === 'return' ? [episode.visualReturnTrace] : episode.props,
+    subjects: phase === 'return' ? ['SUBJECT A', 'Little Remnant'] : playerVisible ? episode.subjects : localSubjects,
+    props: phase === 'return' ? [episode.visualReturnTrace] : relevantProps(episode, visualAction, result),
     environment: phase === 'return' ? 'vast matte near-black non-space with no floor, horizon, perspective, architecture or readable distance' : episode.environment,
+    camera: cameraFor(phase, index, playerVisible),
     lighting: phase === 'return' ? 'controlled soft edge light with one episode-colored trace' : episode.lighting,
     continuity: phase === 'arrival'
       ? ['establish this episode from scratch; carry no landmark, weather or architecture from any previous world']
@@ -401,6 +441,29 @@ function visualBeat(episode: CampaignEpisode, phase: StoryVisualBeat['shot'], ac
     avoid: ['all people not named in subjects', 'readable labels or writing', 'montage', 'split screen', 'props or landmarks from another episode', 'cover-art composition'],
     playerVisible,
     refresh: true,
+  }
+}
+
+export function refineDrawMeOutVisualBeat(beat: StoryVisualBeat): StoryVisualBeat {
+  if (Number(beat.planVersion ?? 0) >= 2) return beat
+  // Authored prologue frames already have deliberate player ownership and may
+  // explicitly require the rainy source street during the threshold transition.
+  if (!beat.episodeId && beat.phase !== 'finale') {
+    return { ...beat, planVersion: 2, camera: beat.camera ?? cameraFor(beat.shot, 0, beat.playerVisible) }
+  }
+  const action = beat.action.trim()
+  const playerVisible = beat.shot === 'return'
+    || /^(?:SUBJECT A )(?:braces|catches|hauls|turns|speaks|holds|pulls|shields)\b/i.test(action)
+    || (beat.phase === 'finale' && /SUBJECT A|player/i.test(action))
+  const subjects = playerVisible ? beat.subjects : beat.subjects.filter((subject) => subject !== 'SUBJECT A')
+  return {
+    ...beat,
+    planVersion: 2,
+    playerVisible,
+    subjects: subjects.length ? subjects : beat.subjects.filter((subject) => !/player|SUBJECT A/i.test(subject)),
+    props: beat.props.slice(0, 2),
+    camera: cameraFor(beat.shot, 0, playerVisible),
+    avoid: [...new Set([...beat.avoid, 'rain', 'raindrop', 'wet street', 'opening-city doorway', 'player portrait unless this shot is explicitly player-owned'])],
   }
 }
 
@@ -412,16 +475,21 @@ function accepted(id: string, effects: DomainEffect[], text: string, choices: [s
 }
 
 function finaleVisual(locale: Locale, shot: StoryVisualBeat['shot'], action: string, result: string, props: string[]): StoryVisualBeat {
+  const playerVisible = /把手放|开始处理最终|开始最终|决定谁能通过|打开最终出口|place a hand|begin the final|decide who passes|open the final exit/i.test(`${action} ${result}`)
   return {
+    planVersion: 2,
     locationId: 'latent-zero',
     location: locale === 'zh' ? '画外之地 · 出口前' : 'Outside the Pictures · Before the Exit',
     phase: 'finale', shot, action, result,
-    subjects: ['SUBJECT A', 'Little Remnant'], props,
+    subjects: playerVisible ? ['SUBJECT A', 'Little Remnant'] : ['Little Remnant'], props: props.slice(0, 2),
     environment: 'vast matte near-black non-space with no floor, horizon, architecture or readable distance; four mutually distinct clue traces form one unstable doorway without a wall',
     lighting: 'controlled edge light from the four clue colors, interrupted by one sterile white trace',
+    camera: playerVisible
+      ? 'wide three-quarter action shot with the player small against the four-trace doorway; no portrait framing'
+      : 'object-forward medium-wide shot led by Little Remnant and the four-trace doorway; the player remains off camera',
     continuity: ['preserve all four clue colors and materials as separate evidence', 'preserve Little Remnant as a tiny incomplete white paper-bird form with a red filament tail'],
     avoid: ['ordinary room', 'city street', 'palace', 'office', 'museum gallery', 'unintroduced people', 'montage', 'split screen', 'readable writing'],
-    playerVisible: true, refresh: true,
+    playerVisible, refresh: true,
   }
 }
 
@@ -506,7 +574,7 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
       ],
       episode.arrival,
       episode.entry.choices,
-      visualBeat(episode, 'arrival', action, episode.arrival, `SUBJECT A arrives and witnesses the episode's immediate human problem: ${episode.environment}`, true),
+      visualBeat(episode, 'arrival', action, episode.arrival, `The endangered local person and the world mechanism reveal the immediate problem inside ${episode.environment}`, false),
     )
   }
 
@@ -523,7 +591,7 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
       ],
       result,
       episode.problem.choices,
-      visualBeat(episode, 'problem', action, result, episode.entry.visualActions[index], true),
+      visualBeat(episode, 'problem', action, result, episode.entry.visualActions[index], episode.entry.playerOwnedShots[index], index),
     )
   }
 
@@ -539,7 +607,7 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
       ],
       result,
       episode.resolutionChoices,
-      visualBeat(episode, 'consequence', action, result, episode.problem.visualActions[index], true),
+      visualBeat(episode, 'consequence', action, result, episode.problem.visualActions[index], episode.problem.playerOwnedShots[index], index),
     )
   }
 
@@ -565,7 +633,7 @@ export function resolveCampaignAction(save: StorySave, cartridge: StoryCartridge
       ],
       summary,
       campaignReturnChoices(cartridge.locale),
-      visualBeat(episode, 'clue', action, summary, `SUBJECT A receives ${episode.visualReturnTrace} while the solved world visibly stabilizes and the exit crack begins to close`, true),
+      visualBeat(episode, 'clue', action, summary, `The local witness presents ${episode.visualReturnTrace} while the solved world visibly stabilizes and the exit crack begins to close`, false, index),
       campaignReturnContext(cartridge.locale),
     )
   }

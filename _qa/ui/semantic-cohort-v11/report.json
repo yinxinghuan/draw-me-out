@@ -1,0 +1,29 @@
+{
+  "promptVersion": 11,
+  "frames": [
+    {
+      "name": "1-label-museum-arrival-world.png",
+      "taskId": "mt_c0907f9f0ce011e432f36e8e848c4583",
+      "locationId": "label-museum-side-door",
+      "shot": "arrival",
+      "playerVisible": false,
+      "mode": "text"
+    },
+    {
+      "name": "2-endless-meeting-consequence-world.png",
+      "taskId": "mt_073e640d213d5aa289dcfe66b905f8fc",
+      "locationId": "endless-meeting-room-three",
+      "shot": "consequence",
+      "playerVisible": false,
+      "mode": "text"
+    },
+    {
+      "name": "3-flying-city-problem-player.png",
+      "taskId": "mt_cb927d67c77dec2783e4feb24732d4d2",
+      "locationId": "flying-city-rope-street",
+      "shot": "problem",
+      "playerVisible": true,
+      "mode": "edit"
+    }
+  ]
+}

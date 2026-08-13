@@ -1,5 +1,5 @@
 import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 
 const entryImage = 'https://cdn.aiwaves.tech/prod/telegram/avatar/643177116/1786469713308632.png'
 const viewport = {
@@ -13,15 +13,28 @@ const evidence = new URL('./ui/campaign-director/', import.meta.url).pathname
 await mkdir(evidence, { recursive: true })
 const imagePrompts = []
 const imageRequests = []
+const semanticFixture = async (name) => `data:image/png;base64,${(await readFile(new URL(`./ui/semantic-cohort-v11/${name}`, import.meta.url))).toString('base64')}`
+const semanticFixtures = {
+  museum: await semanticFixture('1-label-museum-arrival-world.png'),
+  meeting: await semanticFixture('2-endless-meeting-consequence-world.png'),
+  flying: await semanticFixture('3-flying-city-problem-player.png'),
+  latent: `data:image/png;base64,${(await readFile(new URL('./ui/latent-art-direction-sample-v5.png', import.meta.url))).toString('base64')}`,
+}
 
 await page.route('**/alteru-media/api/v1/images/generations', async (route) => {
   const body = route.request().postDataJSON()
   imageRequests.push(body)
-  imagePrompts.push(String(body.prompt ?? body.input?.prompt ?? ''))
+  const prompt = String(body.prompt ?? body.input?.prompt ?? '')
+  imagePrompts.push(prompt)
+  const fixture = /label museum side door/i.test(prompt) ? semanticFixtures.museum
+    : /endless meeting room three/i.test(prompt) ? semanticFixtures.meeting
+      : /flying city rope street/i.test(prompt) ? semanticFixtures.flying
+        : /latent zero|outside the pictures|matte near-black non-space/i.test(prompt) ? semanticFixtures.latent
+          : entryImage
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
     task_id: `qa-${body.request_id}`, request_id: body.request_id, type: 'image', status: 'succeeded',
     created_at: Date.now(), updated_at: Date.now(),
-    media: { type: 'image', url: entryImage, width: 512, height: 640, format: 'png' },
+    media: { type: 'image', url: fixture, width: 512, height: 640, format: 'png' },
   }) })
 })
 await page.addInitScript(() => {
@@ -169,7 +182,7 @@ const snapshots = world.blocks.filter((block) => block.kind === 'image' && block
 if (snapshots.length !== 27) throw new Error(`expected 27 authoritative story frames, got ${snapshots.length}`)
 for (const block of snapshots) {
   const snapshot = JSON.parse(block.data.visualSnapshot)
-  if (!snapshot.locationId || !snapshot.action || !snapshot.result || !snapshot.avoid?.length) throw new Error(`incomplete visual snapshot on ${block.id}`)
+  if (!snapshot.locationId || !snapshot.action || !snapshot.result || !snapshot.avoid?.length || snapshot.planVersion !== 2 || !snapshot.camera) throw new Error(`incomplete visual snapshot on ${block.id}`)
   if (!['unfinished-rain-city', 'latent-zero'].includes(snapshot.locationId) && !snapshot.avoid.includes('montage')) throw new Error(`campaign snapshot lacks montage guard on ${block.id}`)
   const prompt = String(block.data.prompt || '')
   if (!prompt.includes('AUTHORITATIVE SCENE SNAPSHOT') || !prompt.includes(snapshot.locationId.replaceAll('-', ' '))) throw new Error(`prompt is not derived from snapshot on ${block.id}`)
@@ -182,9 +195,10 @@ if (returnSnapshots.some((snapshot) => !snapshot.props.includes('one thin centra
 
 const bodyText = await page.locator('body').innerText()
 if (bodyText.includes('image_subject:') || bodyText.includes('请做出选择')) throw new Error('transport metadata or redundant prompt leaked into visible UI')
-if (imageRequests.some((request) => !Array.isArray(request.reference_urls) || request.reference_urls.length !== 1)) {
-  throw new Error('a player-visible scene image was released without exactly one avatar reference')
-}
+if (imageRequests.some((request) => !Array.isArray(request.reference_urls) || request.reference_urls.length > 1)) throw new Error('an image request has an invalid reference list')
+if (!imageRequests.some((request) => request.mode === 'text' && request.reference_urls.length === 0)) throw new Error('campaign never released an NPC/environment-owned text frame')
+if (!imageRequests.some((request) => request.mode === 'edit' && request.reference_urls.length === 1)) throw new Error('campaign never released a player-owned edit frame')
+if (imageRequests.some((request) => request.mode === 'text' && request.reference_urls.length !== 0)) throw new Error('a non-player frame carried the avatar reference')
 
 console.log(JSON.stringify({
   ok: true,

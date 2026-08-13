@@ -302,6 +302,18 @@ function compactBeat(blocks: StoryBlock[], overlayId: string | undefined, uiVari
   return [narration, ...dialogue, ...outcome].filter((block): block is StoryBlock => Boolean(block))
 }
 
+function visualWorldId(block: StoryBlock | undefined): string {
+  if (!block || block.kind !== 'image') return ''
+  const raw = block.data?.visualSnapshot
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const snapshot = JSON.parse(raw) as { locationId?: string }
+      if (snapshot.locationId?.trim()) return snapshot.locationId.trim()
+    } catch { /* legacy image block; fall back to its visible location label */ }
+  }
+  return block.text.trim()
+}
+
 function CinematicStage({ cartridge, engine, player, previewScene, onReturnLatest, onDecisionReadyChange, onResultReadyChange, uiVariant, turnPhase, lastAction }: {
   cartridge: StoryCartridge
   engine: ReturnType<typeof useStoryEngine>
@@ -318,10 +330,14 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
   const blocks = sceneBlocks(engine.save, scene)
   const image = engine.save.blocks.find((block) => block.id === `image-${scene}` && block.kind === 'image')
   const imageIndex = image ? engine.save.blocks.indexOf(image) : engine.save.blocks.length
-  const previousReady = engine.save.blocks.slice(0, imageIndex).reverse().find((block) => block.kind === 'image' && block.data?.status === 'ready' && block.data?.url)
-  const status = String(image?.data?.status ?? (previousReady ? 'ready' : 'idle')) as ImageBlockStatus
+  const previousReadyCandidate = engine.save.blocks.slice(0, imageIndex).reverse().find((block) => block.kind === 'image' && block.data?.status === 'ready' && block.data?.url)
+  const currentWorld = visualWorldId(image)
+  const previousWorld = visualWorldId(previousReadyCandidate)
+  const previousReady = currentWorld && previousWorld && currentWorld === previousWorld ? previousReadyCandidate : undefined
+  const status = String(image?.data?.status ?? (scene === 0 ? 'ready' : 'idle')) as ImageBlockStatus
   const imageUrl = status === 'ready' ? String(image?.data?.url ?? '') : String(previousReady?.data?.url ?? '')
-  const holdingPrevious = Boolean(image && status !== 'ready' && (previousReady?.data?.url || cartridge.entryImage || cartridge.coverImage))
+  const holdingPrevious = Boolean(image && status !== 'ready' && previousReady?.data?.url)
+  const openingFallback = scene === 0 ? cartridge.entryImage || cartridge.coverImage : ''
   const videoUrl = String(image?.data?.videoUrl ?? '')
   const videoStatus = String(image?.data?.videoStatus ?? 'idle')
   const isPreview = previewScene != null && previewScene !== engine.save.scene
@@ -392,7 +408,9 @@ function CinematicStage({ cartridge, engine, player, previewScene, onReturnLates
     <figure className={`ct-stage__media is-${status}${videoUrl ? ' has-video' : ''}${holdingPrevious ? ' is-holding-previous' : ''}`}>
       {videoUrl && videoStatus === 'ready'
         ? <video src={videoUrl} poster={String(image?.data?.url ?? '')} controls playsInline muted preload="metadata" />
-        : <img src={imageUrl || cartridge.entryImage || cartridge.coverImage} alt={t(cartridge.locale, 'imageAlt', { name: image?.text ?? engine.save.location })} draggable={false} />}
+        : imageUrl || openingFallback
+          ? <img src={imageUrl || openingFallback} alt={t(cartridge.locale, 'imageAlt', { name: image?.text ?? engine.save.location })} draggable={false} />
+          : <div className="ct-stage__semantic-placeholder" data-visual-phase={String(image?.data?.visualPhase ?? 'scene')} aria-hidden="true"><span /><i /><b /></div>}
       {status !== 'ready' && <div className="ct-stage__developing" aria-live="polite"><span /><div><small>{t(cartridge.locale, 'sceneNumber', { n: scene + 1 })}</small><strong>{t(cartridge.locale, status === 'failed' ? 'imageFailed' : 'imageGenerating')}</strong></div>{status === 'failed' && image && <button type="button" onClick={() => engine.retryImage(image.id)}>{t(cartridge.locale, 'retry')}</button>}</div>}
       {holdingPrevious && <span className="ct-stage__previous-frame">{t(cartridge.locale, 'previousScene')}</span>}
       {videoStatus === 'generating' && <div className="ct-stage__video-status"><Icon name="image" /><span>{t(cartridge.locale, 'videoGenerating')}</span></div>}

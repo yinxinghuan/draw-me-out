@@ -1,4 +1,5 @@
 import { SCENE_IMAGE_PROMPT_VERSION, type ParsedScene, type SceneImageSubject, type SceneImageTrigger, type StoryCartridge, type StorySave, type StoryVisualBeat } from '../types'
+import { refineDrawMeOutVisualBeat } from './campaignDirector'
 import { domainVisualBeatForAction } from './domainRules'
 
 export interface SceneImageDecision {
@@ -9,7 +10,19 @@ export interface SceneImageDecision {
   snapshot?: StoryVisualBeat
 }
 
+function directedBeat(cartridge: StoryCartridge, beat: StoryVisualBeat): StoryVisualBeat {
+  return cartridge.id === 'draw-me-out' ? refineDrawMeOutVisualBeat(beat) : beat
+}
+
+function parseVisualSnapshot(value: string | number | undefined): StoryVisualBeat | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined
+  try { return JSON.parse(value) as StoryVisualBeat } catch { return undefined }
+}
+
 export function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisualBeat): string {
+  beat = directedBeat(cartridge, beat)
+  const explicitlyRequiresOpeningRain = beat.locationId === 'unfinished-rain-city'
+    || /rain|raindrop|wet street|wet asphalt/i.test(`${beat.action} ${beat.result} ${beat.environment} ${beat.props.join(' ')} ${beat.continuity.join(' ')}`)
   const target = cartridge.mediaDirector?.imageTarget ?? { width: 640, height: 360 }
   const frame = target.height > target.width
     ? 'Create one fresh 4:5 portrait cinematic illustration. Keep the dominant action and identity-defining body cues inside the central 58% safe column while extending the environment to every edge.'
@@ -19,16 +32,21 @@ export function buildSnapshotPrompt(cartridge: StoryCartridge, beat: StoryVisual
   return [
     frame,
     'AUTHORITATIVE SCENE SNAPSHOT. Every visual fact below is final; do not infer a different location, action, cast, prop or outcome from older context.',
+    cartridge.sceneImageAvoid ? `Global carry-over ban: ${cartridge.sceneImageAvoid}.` : '',
+    cartridge.id === 'draw-me-out' && !explicitlyRequiresOpeningRain
+      ? 'This is not the opening rain city. Show no rain, raindrop, wet street, rainy doorway, duplicated passerby, unfinished white street edge or opening skyline unless the authoritative snapshot explicitly requires it.'
+      : '',
     `Stable location: ${beat.locationId.replace(/-/g, ' ')}. Episode phase: ${beat.phase}. Shot purpose: ${beat.shot}.`,
     `Single visible action: ${beat.action}.`,
     result ? `Visible resolved result: ${result}.` : '',
     `Visible focal subjects only: ${beat.subjects.join(' and ')}.`,
+    beat.camera ? `Camera and composition: ${beat.camera}.` : '',
     beat.props.length ? `Required visible props or traces: ${beat.props.join('; ')}.` : '',
     `Environment: ${beat.environment}. Lighting and palette continuity: ${beat.lighting}.`,
     beat.continuity.length ? `Continuity locks: ${beat.continuity.join('; ')}.` : '',
     beat.avoid.length ? `Forbidden in this frame: ${beat.avoid.join('; ')}.` : '',
     `Mandatory art direction: ${direction}.`,
-    beat.playerVisible ? `SUBJECT A is the player protagonist and owns the single dominant action. Preserve the supplied reference's exact complete visible identity, including silhouette, form or species, proportions, material, covering, face visibility, costume, colors, patterns and accessories. Never transfer those traits to another subject.` : 'Do not apply the player identity reference to any person, creature, reflection, mannequin or prop in this frame.',
+    beat.playerVisible ? `SUBJECT A is the player protagonist and owns the single dominant action. Preserve the supplied reference's exact complete visible identity, including silhouette, form or species, proportions, material, covering, face visibility, costume, colors, patterns and accessories. Never transfer those traits to another subject.` : 'The player is off camera. No player portrait. Do not apply the player identity reference to any person, creature, reflection, mannequin or prop in this frame.',
     'Show one instant only, with at most two focal subjects. No montage, split screen, before-and-after composition, flashback, speculative future, duplicated identity or unrelated background event.',
     'ABSOLUTELY NO VISIBLE WRITING OR LANGUAGE OF ANY KIND. All labels, signs, books, slides, cards and papers remain blank or use non-linguistic marks. No letters, words, numbers, pseudo-text, logo, border or UI.',
   ].filter(Boolean).join(' ')
@@ -244,6 +262,25 @@ export function upgradePendingSceneImagePrompts(save: StorySave, cartridge: Stor
   const blocks = save.blocks.map((block, index) => {
     if (block.kind !== 'image' || block.id === 'image-0' || block.data?.status === 'ready') return block
     if (Number(block.data?.promptVersion ?? 0) >= SCENE_IMAGE_PROMPT_VERSION) return block
+    const snapshot = parseVisualSnapshot(block.data?.visualSnapshot)
+    if (snapshot) {
+      const refined = directedBeat(cartridge, snapshot)
+      changed = true
+      return {
+        ...block,
+        text: refined.location,
+        data: {
+          ...block.data,
+          prompt: buildSnapshotPrompt(cartridge, refined),
+          promptVersion: SCENE_IMAGE_PROMPT_VERSION,
+          playerVisible: refined.playerVisible ? 'true' : 'false',
+          visualSnapshot: JSON.stringify(refined),
+          visualPhase: refined.phase,
+          status: 'queued',
+          url: '',
+        },
+      }
+    }
     let previousImage = -1
     for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
       if (save.blocks[cursor]?.kind === 'image') { previousImage = cursor; break }
@@ -270,6 +307,39 @@ export function upgradePendingSceneImagePrompts(save: StorySave, cartridge: Stor
   return changed ? { ...save, blocks } : save
 }
 
+/**
+ * Existing campaigns may already have a semantically wrong, ready image for the
+ * current scene. Repair that one visible scene only; regenerating the whole
+ * archive would waste media and rewrite the player's visual history.
+ */
+export function upgradeCurrentCampaignImage(save: StorySave, cartridge: StoryCartridge): StorySave {
+  if (cartridge.id !== 'draw-me-out') return save
+  const currentId = `image-${save.scene}`
+  let changed = false
+  const blocks = save.blocks.map((block) => {
+    if (block.kind !== 'image' || block.id !== currentId || Number(block.data?.promptVersion ?? 0) >= SCENE_IMAGE_PROMPT_VERSION) return block
+    const snapshot = parseVisualSnapshot(block.data?.visualSnapshot)
+    if (!snapshot) return block
+    const refined = directedBeat(cartridge, snapshot)
+    changed = true
+    return {
+      ...block,
+      text: refined.location,
+      data: {
+        ...block.data,
+        prompt: buildSnapshotPrompt(cartridge, refined),
+        promptVersion: SCENE_IMAGE_PROMPT_VERSION,
+        playerVisible: refined.playerVisible ? 'true' : 'false',
+        visualSnapshot: JSON.stringify(refined),
+        visualPhase: refined.phase,
+        status: 'queued',
+        url: '',
+      },
+    }
+  })
+  return changed ? { ...save, blocks } : save
+}
+
 export function chooseSceneImage(
   previous: StorySave,
   next: StorySave,
@@ -281,15 +351,16 @@ export function chooseSceneImage(
   visualBeat?: StoryVisualBeat,
 ): SceneImageDecision {
   if (visualBeat?.refresh) {
+    const refined = directedBeat(cartridge, visualBeat)
     return {
-      prompt: buildSnapshotPrompt(cartridge, visualBeat),
+      prompt: buildSnapshotPrompt(cartridge, refined),
       source: 'director',
       reason: visualBeat.shot === 'arrival' ? 'new-location'
         : visualBeat.shot === 'clue' ? 'rare-item'
           : visualBeat.shot === 'return' ? 'chapter-checkpoint'
             : visualBeat.shot === 'danger' ? 'skill-outcome' : 'objective-change',
-      playerVisible: visualBeat.playerVisible,
-      snapshot: visualBeat,
+      playerVisible: refined.playerVisible,
+      snapshot: refined,
     }
   }
   const proposal = aiPrompt?.trim()
