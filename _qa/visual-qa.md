@@ -2,40 +2,40 @@
 
 ## Context
 
-- 游戏/构建：本地 `draw-me-out`，2026-08-13 全局阅读门禁、决策上下文、开场场景快照与画外之地中转站改造。
-- 评审目标：确认快速点击不能跳过结果；小残介绍与三个入口在同屏形成因果；雨城不会被画外深黑规则污染；每个世界都先在原地揭示线索、再独立返回固定中转镜，之后才允许选择下一世界；完整四世界战役可恢复并进入终局。
+- 游戏/构建：本地 `draw-me-out`，2026-08-17 结局图片、信息层级与失败恢复改造；保留 2026-08-13 全局阅读门禁、决策上下文、开场场景快照与画外之地中转站证据。
+- 评审目标：确认完整四世界战役可恢复并进入终局；终局提示会真正生成并持久化一张 4:5 图片；首次媒体失败不阻断文字结局、显式重试能恢复；结局 CTA、图标和正文在双尺寸上不重叠。
 - 需求与视觉文档：`doc/requirements.md`、`doc/visual.md`。
 - 视口：390×844、320×568、1366×768；平台内构图为主，另保留外部访客栏检查。
-- 运行证据：`_qa/ui/campaign-director/01-opening-result-platform-layout-*.png`、`02-remnant-decision-platform-layout-*.png`、`03-museum-entry-platform-layout-*.png`、`04-museum-clue-platform-layout-*.png`、`05-boundless-return-platform-layout-*.png`、`06-fourth-clue-platform-layout-*.png`、`07-four-anchors-platform-layout-*.png`、`08-finale-ready-platform-layout-*.png`。
-- 真实媒体服务样张：`latent-art-direction-sample.png` 至 `latent-art-direction-sample-v5.png`，以及 `_qa/ui/semantic-cohort-v11/` 三张后半段语义抽样与 `report.json`。
+- 运行证据：既有 `01`–`08` 战役截图，加上 `09-ending-image-failed-platform-layout-{390x844,320x568}.png` 与 `10-ending-complete-platform-layout-{390x844,320x568}.png`。
+- 真实媒体服务样张：`_qa/ui/campaign-director/ending-media-service-sample.png`，任务 `mt_e26638c2b08fe12517d1276872300010`，正式 UUID、`edit`、512×640、单一公开发布者头像参考。
 
 ## Executive assessment
 
-- 结论：390×844 与 320×568 均从开场连续完成 27 个受管回合、四个世界、四次独立返回、四次重载和终局闸门；每个多页结果在末页前均未暴露主 CTA。后半段三张正式媒体抽样分别建立博物馆、会议室和飞城，均无雨街/水滴残留；只有飞城玩家动作镜携带身份参考。四次返回快照继续固定 `latent-zero`、中央红线环、四锚位方位和同一正面镜位。
+- 结论：390×844 与 320×568 均从开场连续完成 27 个受管回合、四个世界、四次独立返回、四次重载、终局生成、一次结局图终态失败和一次显式成功重试。两种尺寸均只有一个持久结局图块，横向溢出为 0；CTA 高 52 px、箭头宽 20 px，且文末按钮不再覆盖中段正文。
 - 最强质量：黑色非空间已没有地面、地平线、透视或房间感；30–36% 全身人物兼顾身份可读性与大面积负空间。
 - 说明：v5 使用无身份参考的通用人物，仅验证比例、姿态、背景与抽象痕迹，不能作为用户头像一致性的证据。
-- P0/P1/P2：0 / 0 / 1。新增发现的 P1 是后半段头像参考滥用与跨世界旧图保留；已用镜头方案 v2、提示版本 11、按 `locationId` 限制上一镜和当前帧存档迁移修复，并以三张真实生成像素复验。
+- P0/P1/P2：0 / 0 / 1。遗留 P2 是正式发布者头像本身含有包装字符，媒体服务会忠实保留这些身份细节；本轮没有新增字符，但不能把“无文字”当作可覆盖玩家参考的命令。
 
 ## Scorecard
 
 | Category | Score 1–5 | Evidence | Required action |
 |---|---:|---|---|
-| Hierarchy | 5 | 390 决策态与结果态 | 保持阶段互斥 |
+| Hierarchy | 5 | 双尺寸终局图、标题、场景和得失顺序 | 保持终局图为第一焦点 |
 | Coherence | 4 | 固定 UI、视觉文档与 v5 | 生产环境检查真实头像完整身份 |
 | Readability | 4 | 320×568 与 390×844 | 继续使用语义分页，不截断 |
 | Game feel | 4 | 完整试玩切片自动检查 | 保持点击即提交与结果确认节奏 |
-| Asset quality | 4 | v5 真实媒体样张 | 线上复验遮挡物、服装和非人头像 |
+| Asset quality | 4 | 真实结局 `edit` 样张 | 继续覆盖正常真人头像样本 |
 | Responsive UX | 4 | 320、390、桌面平台内截图 | 无需修复 |
 | Polish | 4 | SVG 控件、状态、按钮、分页 | 无需修复 |
 
 ## Finding
 
 - Severity：P2。
-- Screen/location：画外之地生产头像参考。
-- Observation：v5 已证明 34% 全身比例不会破坏空旷感，但它没有使用用户头像；无法从该样张证明床单鬼魂、面具、非人身体或特殊服装能被完整保留。
-- Impact：如果模型只借用脸部或重新发明身体，角色身份仍会中断。
-- Concrete fix：统一场景方向、固定世界规则与 AI 语言合同均明确“完整身份参考”，包含轮廓、形态、覆盖物、服装、颜色、纹样和配件；禁止只复制脸、补造肢体或职业服装。画外人物统一为 30–36% 全身中远景。
-- Verification evidence：v5 通过背景、比例、姿态与负空间检查；真实头像身份列为发布后的专门验证项，不用无参考样张冒充通过。
+- Screen/location：结局真实媒体样张。
+- Observation：项目发布者头像是带印刷字符的黑色包装造型；终局 `edit` 样张保留了包装轮廓、材质、白色造型和字符，也没有把它改成人体。角色身份正确，但参考原有字符仍会进入画面。
+- Impact：这是身份保真与“生成图无新文字”的真实边界；强行抹除参考字符反而会改变玩家完整身份。
+- Concrete fix：运行时继续禁止提示词自行生成文字，同时把参考图中原有字符视为身份细节。产品若要求绝对无字，应更换发布者回退头像，而不是在游戏端偷偷改造玩家头像。
+- Verification evidence：`ending-media-service-sample.png`；512×640、`edit`、单一参考，人物/物体身份没有转移给白鸟、窗框或其他道具。
 
 ## Foundation audit
 
@@ -68,6 +68,6 @@
 
 ## Final recommendation
 
-- Final average：4.1。
+- Final average：4.3。
 - Categories below 3：无。
 - Decision：故事和视觉规则可进入完整自动验证；发布后必须使用至少一个真人头像和一个覆盖式/非人头像复验完整身份，失败时不能以脸部相似判定通过。

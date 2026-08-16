@@ -20,7 +20,8 @@
     "test:stage-narrative": "TMPDIR=/private/tmp tsx _qa/stage-narrative.ts",
     "test:opening": "tsx _qa/opening-contract.ts",
     "test:campaign": "tsx _qa/campaign-spine.ts",
-    "test:campaign-director": "tsx _qa/campaign-director.ts"
+    "test:campaign-director": "tsx _qa/campaign-director.ts",
+    "qa:ending-media": "tsx _qa/generate-ending-image-sample.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

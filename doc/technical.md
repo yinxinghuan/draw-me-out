@@ -17,7 +17,7 @@
 - `src/story/cartridges/drawMeOut.ts`：中英文世界合同、数值、章节、危险导演、结局能力、角色、地图、视觉与音频方向。
 - `src/story/cartridges/drawMeOutCampaign.ts`：开场五幕与第一次图片世界往返的本地可玩切片。
 - `src/story/engine/campaignDirector.ts`：四世界主线与终局闸门；把当前战役阶段、具体行动、可见后果、唯一线索和下一组合法行动组织成可重载的确定性回合。
-- `src/story/engine/reducer.ts`：唯一状态更新入口；维护物品、伙伴、地图、关系、事实、场景图和结局状态。
+- `src/story/engine/reducer.ts`：唯一状态更新入口；维护物品、伙伴、地图、关系、事实、场景图和结局状态；`ensureEndingImageBlock` 将终局提示幂等地转换为一张可恢复的结局图片块。
 - `src/story/engine/domainRules.ts`：自由文本意图匹配、前置条件裁判、原子效果、固定后续选择、派生线索事实与道具次数显示。
 - `src/story/engine/protocol.ts`：解析 `[choices]`、`[widget]`、`[inventory]`、`[fact]`、`[party_change]` 等结构化命令，并清除括号完整或缺失的 `image_prompt / image_subject` 传输元数据。
 - `src/story/engine/stageNarrative.ts`：从当前场景选择真正有信息量的情境字幕；过滤内部协议和“请做出选择 / What will you do next”类冗余元提示。
@@ -34,13 +34,13 @@
 - `public/alteru-storage-scope.js`、`src/alteru-storage-scope.d.ts`：按当前部署 UUID 隔离浏览器存储，防止同域游戏和 Remix 互相读取本地状态。
 - `worker/index.js`：自托管部署的最小健康检查入口；不保存剧情、身份或媒体数据，也不创建第二套后端状态。
 - `src/shared/runtime/game-id.ts`：从 Remix 后的当前 UUID 生成同源 `/<GAME_ID>` API base；当前只为可选健康检查保留合同，不参与平台存档、叙事或媒体请求。
-- `src/story/StoryShell.tsx`：入口、恢复存档、三阶段信息顺序、Civic 舞台、抽屉、分页、选项和输入。
-- `src/story/story.less`：Civic/Living 两种表现层、响应式布局、状态和动效。
+- `src/story/StoryShell.tsx`：入口、恢复存档、三阶段信息顺序、Civic 舞台、抽屉、分页、选项和输入；结局态从持久图片块渲染 4:5 主视觉、加载/失败重试和分层尾声。
+- `src/story/story.less`：Civic/Living 两种表现层、响应式布局、状态和动效；结局页的终局图、显影底板、52 px 文末 CTA 与 20 px 箭头均在此约束。
 - `src/story/audio/`：合成音乐与音效。
 - `src/story/img/worlds/`：运行时方形封面与独立 16:9 无人物入口建立镜头。
 - `public/poster.png`：正式 1024×1024 英文上架海报；`poster-source.png` 保留平台 transit 原始输出，`poster-source-v1.webp` 仅归档被替换的第一版。
 - `doc/requirements.md`、`doc/visual.md`、`doc/world-brief.json`：玩法、视觉和机器可校验世界蓝图。
-- `_qa/`：协议、危险、结局、普通玩家语言、领域规则恶意输出、开场分支、逐回合重载的四世界战役测试，以及 390×844 / 320×568 完整浏览器游玩证据。
+- `_qa/`：协议、危险、结局、普通玩家语言、领域规则恶意输出、开场分支、逐回合重载的四世界战役测试，以及 390×844 / 320×568 完整浏览器游玩证据；`generate-ending-image-sample.ts` 使用正式媒体服务复验终局 `edit` 请求。
 
 ## 3. 核心模块
 
@@ -84,13 +84,15 @@
 
 场景图队列优先生成玩家当前看到的最新场景；较早的未完成图保留在后台，当前图完成后再补齐。页面刷新、WebView 被系统回收或存档恢复时，失去原浏览器请求的 `generating` 图会自动恢复为 `queued`，不会永久停在生成中。单次任务以 60 秒为上限；超时后显示明确重试状态，同时保留相同幂等请求 ID，让用户重试时优先找回原任务，而不是重复生成。最终失败时保留上一张图，故事仍可继续。物品在写入行囊后独立后台显影，图片失败不会撤销物品状态。
 
+结局图复用同一队列与完整身份合同。结局文本提交时，`ensureEndingImageBlock` 用稳定 `ending.id` 创建唯一 `purpose=finale` 图片块并标记玩家为主动作主体；重复规范化不会复制。旧存档已经有完整结局但没有该块时会补排一次；旧版本结局图只在提示版本落后时重新排队。结局图片失败只改变图片块状态，文字结局、得失清单和“继续尾声”始终可用；显式重试仍遵守媒体客户端的请求 ID 与结构化错误规则。
+
 ### 危险、音频与结局
 
 危险导演在连续 2–4 个安全回合后安排警告/对抗，并在处理后冷却 2 回合。战斗只偶尔出现，主要用世界规则、交涉和代价解决；兜底后果为“被发现” +14，而非死亡删档。
 
 音频根据画外主题生成低频脉冲、倒放纸笔质感和不同事件的短音；状态张力实时改变密度。AudioContext 只在用户交互后恢复，静音与音频失败不影响操作。
 
-主线终局由战役闸门明确开放；旧版结局导演仍兼容自由叙事存档和 8 个结局锚点。它冻结快照后计算相容能力，再让 AI 生成具体人物与地区尾声；输出必须包含不可逆代价、保留/失去/未解决事项，且不能引入快照之外的关键物品或伙伴。
+主线终局由战役闸门明确开放；旧版结局导演仍兼容自由叙事存档和 8 个结局锚点。它冻结快照后计算相容能力，再让 AI 生成具体人物与地区尾声；输出必须包含不可逆代价、保留/失去/未解决事项和英文 `finalImagePrompt`，且不能引入快照之外的关键物品或伙伴。界面先显示终局图与标题，再显示 4–6 个场景、三栏得失和人物/地区去向；文末按钮不使用 sticky/fixed，因此不会中途遮住内容。
 
 ### 存档与恢复
 
@@ -106,6 +108,7 @@
 - 增加图片世界：先在 `campaignDirector.ts` 定义稳定矛盾、四阶段事务和权威视觉快照，再在 cartridge 补地图与世界合同；图片提示只能描述当前事务提交后的状态。
 - 调整头像身份合同或主动作判断：编辑 `src/story/engine/imageIdentity.ts`、`imageDirector.ts` 和 cartridge 的 `playerImageRole/playerImageExclusions`，并重新运行普通头像与无脸非人测试图验证。
 - 调整图片尺寸、频率、队列优先级或启用里程碑视频：修改 cartridge 的 `imageDirector/mediaDirector` 与 `useStoryEngine.ts`；队列改动必须运行 `npm run test:image-queue`。视频启用前必须提供真实 9:16 首尾帧、5 秒动作和声音提示，不能拉伸 4:5 图片。
+- 调整结局图提示、迁移版本或结局页层级：分别修改 `endingAdapter.ts` / cartridge 的 `finalImagePrompt`、`reducer.ts` 的 `ENDING_IMAGE_PROMPT_VERSION`、`StoryShell.tsx` 与 `story.less`；运行 `npm run test:ending`、双尺寸 `_qa/playthrough.mjs` 和按需执行 `npm run qa:ending-media`。
 - 改 UI 排序、阶段或抽屉：编辑 `StoryShell.tsx`；改字幕价值判断编辑 `engine/stageNarrative.ts` 并运行 `npm run test:stage-narrative`；改视觉 token、短屏高度、按钮和分页行为编辑 `story.less`。
 - 改文字、语言检测和系统提示：编辑 `src/story/i18n.ts`；剧情双语文案仍放在 cartridge/campaign。
 - 改音色、BPM、张力权重：先修改 cartridge 的 `audioTheme`，需要新合成手法时再改 `src/story/audio/`。

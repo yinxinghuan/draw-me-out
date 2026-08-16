@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { applyParsedScene, createInitialSave } from '../src/story/engine/reducer'
-import { buildEndingSnapshot, fallbackEndingCandidate, validateEndingCandidate } from '../src/story/engine/endingDirector'
+import { applyParsedScene, createInitialSave, ensureEndingImageBlock } from '../src/story/engine/reducer'
+import { buildEndingSnapshot, fallbackEndingCandidate, finalizeEnding, validateEndingCandidate } from '../src/story/engine/endingDirector'
 import { parseStoryProtocol } from '../src/story/engine/protocol'
 import type { StoryCartridge, StoryEndingCandidate } from '../src/story/types'
 
@@ -84,4 +84,17 @@ const fallback = fallbackEndingCandidate(snapshot, cartridge)
 assert.equal(fallback.anchorFamily, 'unique-dawn')
 assert.deepEqual(validateEndingCandidate(fallback, snapshot, cartridge), [])
 
-console.log(JSON.stringify({ ok: true, snapshotId: snapshot.id, capabilities: snapshot.availableCapabilities, invalidErrors: errors.length }))
+const completed = {
+  ...ready,
+  finale: { status: 'complete' as const, snapshot, ending: finalizeEnding(fallback, snapshot, false) },
+}
+const withEndingImage = ensureEndingImageBlock(completed, cartridge)
+const endingImages = withEndingImage.blocks.filter((block) => block.kind === 'image' && block.data?.purpose === 'finale')
+assert.equal(endingImages.length, 1, 'a completed ending must enqueue exactly one final image')
+assert.equal(endingImages[0].data?.status, 'queued')
+assert.equal(endingImages[0].data?.playerVisible, 'true')
+assert.match(String(endingImages[0].data?.prompt), /SUBJECT A is the player protagonist/)
+assert.match(String(endingImages[0].data?.prompt), /cinematic restored vale at dawn/)
+assert.equal(ensureEndingImageBlock(withEndingImage, cartridge).blocks.length, withEndingImage.blocks.length, 'save migration must not duplicate the final image')
+
+console.log(JSON.stringify({ ok: true, snapshotId: snapshot.id, capabilities: snapshot.availableCapabilities, invalidErrors: errors.length, endingImages: endingImages.length }))

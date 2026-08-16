@@ -13,6 +13,7 @@ const evidence = new URL('./ui/campaign-director/', import.meta.url).pathname
 await mkdir(evidence, { recursive: true })
 const imagePrompts = []
 const imageRequests = []
+let rejectFinalImageOnce = true
 const semanticFixture = async (name) => `data:image/png;base64,${(await readFile(new URL(`./ui/semantic-cohort-v11/${name}`, import.meta.url))).toString('base64')}`
 const semanticFixtures = {
   museum: await semanticFixture('1-label-museum-arrival-world.png'),
@@ -26,7 +27,15 @@ await page.route('**/alteru-media/api/v1/images/generations', async (route) => {
   imageRequests.push(body)
   const prompt = String(body.prompt ?? body.input?.prompt ?? '')
   imagePrompts.push(prompt)
-  const fixture = /label museum side door/i.test(prompt) ? semanticFixtures.museum
+  if (/definitive 4:5 portrait ending illustration/i.test(prompt) && rejectFinalImageOnce) {
+    rejectFinalImageOnce = false
+    await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({
+      error: { code: 'PROVIDER_REJECTED', message: 'QA one-shot ending image rejection', retryable: false },
+    }) })
+    return
+  }
+  const fixture = /definitive 4:5 portrait ending illustration/i.test(prompt) ? semanticFixtures.museum
+    : /label museum side door/i.test(prompt) ? semanticFixtures.museum
     : /endless meeting room three/i.test(prompt) ? semanticFixtures.meeting
       : /flying city rope street/i.test(prompt) ? semanticFixtures.flying
         : /latent zero|outside the pictures|matte near-black non-space/i.test(prompt) ? semanticFixtures.latent
@@ -37,6 +46,7 @@ await page.route('**/alteru-media/api/v1/images/generations', async (route) => {
     media: { type: 'image', url: fixture, width: 512, height: 640, format: 'png' },
   }) })
 })
+await page.route('**/aigram/api/game-chat', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
 await page.addInitScript(() => {
   if (!sessionStorage.getItem('dmo-qa-seeded')) {
     localStorage.clear()
@@ -168,6 +178,31 @@ await page.waitForFunction(() => {
 }, { timeout: 8_000 })
 await page.screenshot({ path: `${evidence}08-finale-ready-platform-layout-${viewportTag}.png`, fullPage: true })
 
+await page.getByRole('button', { name: /完成属于你的结局/ }).click()
+await page.locator('.st-ending').waitFor({ state: 'visible', timeout: 8_000 })
+await page.getByText(/最后一张画没有显影成功/).waitFor({ state: 'visible', timeout: 8_000 })
+await page.screenshot({ path: `${evidence}09-ending-image-failed-platform-layout-${viewportTag}.png`, fullPage: true })
+if (!await page.getByRole('button', { name: /继续尾声/ }).isVisible()) throw new Error('ending image failure blocked the text ending or continuation')
+await page.getByRole('button', { name: /重新显影结局图/ }).click()
+await page.locator('.st-ending__media>img').waitFor({ state: 'visible', timeout: 8_000 })
+await page.screenshot({ path: `${evidence}10-ending-complete-platform-layout-${viewportTag}.png`, fullPage: true })
+const endingLayout = await page.evaluate(() => {
+  const ending = document.querySelector('.st-ending')
+  const button = document.querySelector('.st-ending footer button')
+  const icon = button?.querySelector('svg')
+  const hero = document.querySelector('.st-ending__hero')
+  return {
+    overflow: ending ? ending.scrollWidth - ending.clientWidth : 999,
+    buttonHeight: button?.getBoundingClientRect().height ?? 999,
+    iconWidth: icon?.getBoundingClientRect().width ?? 999,
+    heroWidth: hero?.getBoundingClientRect().width ?? 0,
+    heroHeight: hero?.getBoundingClientRect().height ?? 0,
+  }
+})
+if (endingLayout.overflow > 1) throw new Error(`ending has horizontal overflow: ${JSON.stringify(endingLayout)}`)
+if (endingLayout.buttonHeight > 80 || endingLayout.iconWidth > 24) throw new Error(`ending CTA regressed to an oversized block: ${JSON.stringify(endingLayout)}`)
+if (endingLayout.heroWidth < 280 || endingLayout.heroHeight <= endingLayout.heroWidth) throw new Error(`ending image is not a readable 4:5 hero: ${JSON.stringify(endingLayout)}`)
+
 const world = await readWorld()
 if (world.version !== 8) throw new Error(`expected save v8, got ${world.version}`)
 if (world.facts['home-clue-count'] !== 4 || world.facts['coordinates-four'] !== true) throw new Error('four clue campaign did not complete')
@@ -175,8 +210,11 @@ if (new Set(world.inventory.filter((item) => item.id.startsWith('coordinate-')).
 if (world.campaign.completedEpisodes.length !== 4 || world.campaign.currentEpisode) throw new Error('campaign checkpoint did not return to the hub')
 if (world.campaign.hubReturnCount !== 4) throw new Error('not every picture world passed through the Boundless transit station')
 if (world.blocks.some((block) => block.kind === 'check')) throw new Error('governed campaign turns received an independent danger check')
-if (world.finale.status !== 'ready' || !world.sessionEnded) throw new Error('finale gate did not become ready')
+if (world.finale.status !== 'complete' || !world.sessionEnded) throw new Error('finale did not remain complete after the ending image flow')
 if (!world.characters.some((character) => character.id === 'default-seven' && character.status === 'known')) throw new Error('Default Seven was not visibly introduced before the finale')
+const finalWorld = await readWorld()
+const endingImageBlocks = finalWorld.blocks.filter((block) => block.kind === 'image' && block.data?.purpose === 'finale')
+if (finalWorld.finale.status !== 'complete' || endingImageBlocks.length !== 1 || endingImageBlocks[0].data?.status !== 'ready') throw new Error('ending image was not persisted exactly once')
 
 const snapshots = world.blocks.filter((block) => block.kind === 'image' && block.data?.visualSnapshot)
 if (snapshots.length !== 27) throw new Error(`expected 27 authoritative story frames, got ${snapshots.length}`)
@@ -209,5 +247,6 @@ console.log(JSON.stringify({
   imageRequests: imagePrompts.length,
   reloads: routes.length,
   evidence,
+  endingLayout,
 }, null, 2))
 await browser.close()

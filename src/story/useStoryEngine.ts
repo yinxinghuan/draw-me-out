@@ -6,7 +6,7 @@ import { aigramAdapter } from './adapters/aigram'
 import { mockAdapter } from './adapters/mock'
 import { remoteAdapter } from './adapters/remote'
 import { resolveCartridge } from './cartridges'
-import { applyParsedScene, createImageBlock, createInitialSave, createRecoveryChoices, enterStory, localizeKnownState, normalizeCharacterState, updateImageBlock, updateInventoryItemImage } from './engine/reducer'
+import { applyParsedScene, createImageBlock, createInitialSave, createRecoveryChoices, ensureEndingImageBlock, enterStory, localizeKnownState, normalizeCharacterState, updateImageBlock, updateInventoryItemImage } from './engine/reducer'
 import { isProtocolResidueText, parseStoryProtocol } from './engine/protocol'
 import { shouldRepairDirectPlayerAction, shouldUsePlayerImageReference, upgradeAuthoredOpeningSnapshots, upgradeCurrentCampaignImage, upgradePendingSceneImagePrompts } from './engine/imageDirector'
 import { buildPlayerIdentityPrompt } from './engine/imageIdentity'
@@ -164,7 +164,7 @@ function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge:
   if (undoKey && undoKey.count > 0) undoKey.count = 1
   return upgradeCurrentCampaignImage(
     upgradePendingSceneImagePrompts(
-      upgradeAuthoredOpeningSnapshots(syncDomainDerivedState(normalized, cartridge), cartridge),
+      upgradeAuthoredOpeningSnapshots(syncDomainDerivedState(ensureEndingImageBlock(normalized, cartridge), cartridge), cartridge),
       cartridge,
     ),
     cartridge,
@@ -435,13 +435,13 @@ export function useStoryEngine(cartridge: StoryCartridge, initialMode: StoryMode
     commit((current) => ({ ...current, finale: { status: 'generating', reason: current.finale.reason, snapshot } }))
     try {
       const result = await generateStoryEnding(cartridge, before, setProgress)
-      commit((current) => ({
+      commit((current) => ensureEndingImageBlock({
         ...current,
         finale: {
           status: 'complete', reason: current.finale.reason, snapshot: result.snapshot, ending: result.ending,
           error: result.usedFallback && result.errors.length ? result.errors.join('; ') : undefined,
         },
-      }))
+      }, cartridge))
       setProgress(null)
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause)

@@ -204,6 +204,55 @@ export function createImageBlock(id: string, location: string, prompt: string, s
   return { id, kind: 'image', text: location, data: { prompt, status, url, ...metadata } }
 }
 
+export const ENDING_IMAGE_PROMPT_VERSION = 1
+
+export function buildEndingImagePrompt(save: StorySave, cartridge: StoryCartridge): string {
+  const ending = save.finale.ending
+  if (!ending) return ''
+  return [
+    'Create one definitive 4:5 portrait ending illustration for this story.',
+    'SUBJECT A is the player protagonist and the dominant visible actor in this final event.',
+    `FINAL EVENT: ${ending.finalImagePrompt.trim()}`,
+    `ART DIRECTION: ${cartridge.sceneImageDirection ?? `${cartridge.theme.material} cinematic story illustration`}.`,
+    'Show one emotionally specific resolved moment, not a montage or a summary poster.',
+    'No title, captions, writing, letters, pseudo-text, logo, border, watermark or UI.',
+  ].join(' ')
+}
+
+export function ensureEndingImageBlock(save: StorySave, cartridge: StoryCartridge): StorySave {
+  const ending = save.finale.ending
+  if (save.finale.status !== 'complete' || !ending?.finalImagePrompt.trim()) return save
+  const blockId = `ending-image-${ending.id}`
+  const prompt = buildEndingImagePrompt(save, cartridge)
+  const existingIndex = save.blocks.findIndex((block) => block.kind === 'image' && block.data?.endingId === ending.id)
+  if (existingIndex < 0) return {
+    ...save,
+    blocks: [...save.blocks, createImageBlock(blockId, save.location, prompt, 'queued', '', {
+      endingId: ending.id,
+      purpose: 'finale',
+      playerVisible: 'true',
+      promptVersion: String(ENDING_IMAGE_PROMPT_VERSION),
+    })],
+  }
+  const existing = save.blocks[existingIndex]
+  if (Number(existing.data?.promptVersion ?? 0) >= ENDING_IMAGE_PROMPT_VERSION) return save
+  return {
+    ...save,
+    blocks: save.blocks.map((block, index) => index === existingIndex
+      ? { ...block, id: blockId, text: save.location, data: {
+        ...block.data,
+        prompt,
+        status: 'queued',
+        url: '',
+        endingId: ending.id,
+        purpose: 'finale',
+        playerVisible: 'true',
+        promptVersion: String(ENDING_IMAGE_PROMPT_VERSION),
+      } }
+      : block),
+  }
+}
+
 export function updateImageBlock(save: StorySave, blockId: string, patch: { status?: ImageBlockStatus; url?: string; videoStatus?: VideoBlockStatus; videoUrl?: string; videoTaskId?: string; playerVisible?: string; identityRefVersion?: number }): StorySave {
   return {
     ...save,

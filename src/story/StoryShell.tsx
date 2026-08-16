@@ -500,9 +500,23 @@ function EndingExperience({ cartridge, engine }: { cartridge: StoryCartridge; en
   const ending = finale.ending
   const characterNames = new Map(engine.save.characters.map((character) => [character.id, character.name]))
   const regionNames = new Map(engine.save.map.map((node) => [node.id, node.label]))
+  const endingImage = engine.save.blocks.find((block) => block.kind === 'image' && block.data?.endingId === ending.id)
+  const endingImageStatus = String(endingImage?.data?.status ?? 'queued')
+  const endingImageUrl = String(endingImage?.data?.url ?? '')
   return <div className="st-ending" role="dialog" aria-modal="true" aria-labelledby="st-ending-title">
     <article>
-      <header><small>{t(cartridge.locale, ending.generated ? 'generatedEnding' : 'anchorEnding')}</small><h1 id="st-ending-title">{ending.title}</h1><p>{ending.thesis}</p></header>
+      <figure className={`st-ending__hero is-${endingImageStatus}`}>
+        <div className="st-ending__media">
+          {endingImageStatus === 'ready' && endingImageUrl
+            ? <img src={endingImageUrl} alt={ending.title} draggable={false} />
+            : <div className="st-ending__developing" role="status" aria-live="polite">
+              <Icon name="image" />
+              <strong>{t(cartridge.locale, endingImageStatus === 'failed' ? 'endingImageFailed' : 'endingImageGenerating')}</strong>
+              {endingImageStatus === 'failed' && endingImage && <button type="button" onClick={() => engine.retryImage(endingImage.id)}><Icon name="refresh" />{t(cartridge.locale, 'endingImageRetry')}</button>}
+            </div>}
+        </div>
+        <figcaption><small>{t(cartridge.locale, ending.generated ? 'generatedEnding' : 'anchorEnding')}</small><h1 id="st-ending-title">{ending.title}</h1><p>{ending.thesis}</p></figcaption>
+      </figure>
       <ol className="st-ending__scenes">{ending.finaleScenes.map((scene, index) => <li key={`${index}-${scene}`}>{scene}</li>)}</ol>
       <div className="st-ending__ledger">
         <section><small>{t(cartridge.locale, 'endingPreserved')}</small>{ending.preserved.map((entry) => <p key={entry}>{entry}</p>)}</section>

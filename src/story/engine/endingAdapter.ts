@@ -65,7 +65,7 @@ Return raw JSON only, with exactly these keys:
   "finaleScenes": ["4 to 6 ordered concise scenes"],
   "characterEpilogues": [{"characterId":"exact saved id","text":"specific epilogue"}],
   "regionalEpilogues": [{"regionId":"exact saved map id","text":"specific epilogue"}],
-  "finalImagePrompt": "English cinematic 4:5 portrait scene, one event, no text, no UI",
+  "finalImagePrompt": "English cinematic 4:5 portrait scene with SUBJECT A as the player protagonist and dominant visible actor, one event, no text, no UI",
   "videoCandidate": "optional English 5 second continuous milestone scene"
 }
 
