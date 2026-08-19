@@ -114,3 +114,7 @@
 - 改音色、BPM、张力权重：先修改 cartridge 的 `audioTheme`，需要新合成手法时再改 `src/story/audio/`。
 - 改媒体或存档后端：只修改 `src/shared/runtime/media.ts` 或 `src/shared/save/useGameSave.ts` 的稳定平台合同；游戏代码中不得出现模型提供商地址、密钥或私有部署逻辑。
 - 更换正式海报：同名覆盖 `public/poster.png`，同时保留平台 transit 原始输出和请求记录；海报只允许英文且需检查 1024 原图与 160 缩略图。当前采用请求 `be8586a7-2333-4e68-a611-5a547de686a1`，原始 URL 为 `https://cdn.aiwaves.tech/prod/telegram/avatar/643177116/1786472139978696.png`。
+
+## 行动权威影子审计（2026-08-20）
+
+`engine/authorityShadow.ts` 只观察当前阶段已经显示的选择，以现有确定性 `domainRules` 分类 `accepted / rejected / open` 并报告非终局空 tray。它不改 cinematic 阶段流、不补选项、不写存档或上传数据；页面内存最多保留 100 条，`?authority_shadow=0` 可关闭。运行 `npm run test:authority-shadow` 验证选择零改写。

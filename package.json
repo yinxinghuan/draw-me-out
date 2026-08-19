@@ -21,7 +21,8 @@
     "test:opening": "tsx _qa/opening-contract.ts",
     "test:campaign": "tsx _qa/campaign-spine.ts",
     "test:campaign-director": "tsx _qa/campaign-director.ts",
-    "qa:ending-media": "tsx _qa/generate-ending-image-sample.ts"
+    "qa:ending-media": "tsx _qa/generate-ending-image-sample.ts",
+    "test:authority-shadow": "node --import tsx _qa/authority-shadow.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
