@@ -489,7 +489,7 @@ function build(locale: Locale): StoryCartridge {
     audioTheme: {
       recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .28 }, cues: { discovery: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, relationship: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, summary: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 } } },
       material: 'latent', bpm: 78, rootHz: 110, scale: [0, 2, 3, 7, 9],
-      levels: { music: .14, ambient: .17, sfx: .44, master: .48 },
+      levels: { music: .14, ambient: .17, sfx: .045, master: .48 },
       tension: [
         { statId: 'self', direction: 'low', weight: .38 },
         { statId: 'compute', direction: 'low', weight: .22 },
