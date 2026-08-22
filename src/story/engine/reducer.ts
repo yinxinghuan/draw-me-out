@@ -4,6 +4,7 @@ import { chooseSceneImage } from './imageDirector'
 import { createInitialDangerState, normalizeDangerState, settleDangerTurn } from './dangerDirector'
 import { canStartTrueEnding } from './endingDirector'
 import { applyDomainResolution, domainAllowsModelCommand, resolveDomainAction, syncDomainDerivedState } from './domainRules'
+import { filterGroundedChoices } from './continuity'
 import { createInitialCampaignState, syncCampaignState } from './campaignDirector'
 
 function clamp(value: number, min: number, max: number): number {
@@ -330,22 +331,15 @@ function shortChoiceContext(value: string, maxLength: number): string {
   return clean.length > maxLength ? `${clean.slice(0, maxLength - 1).trim()}…` : clean
 }
 
-export function createRecoveryChoices(save: Pick<StorySave, 'scene' | 'location' | 'objective' | 'partyMemberIds'>, cartridge: StoryCartridge): StorySave['choices'] {
-  const location = shortChoiceContext(save.location, cartridge.locale === 'zh' ? 14 : 24)
-  const objective = shortChoiceContext(save.objective, cartridge.locale === 'zh' ? 18 : 32)
-  const hasParty = save.partyMemberIds.length > 0
-  const labels = cartridge.locale === 'zh'
-    ? [
-        `观察${location || '周围'}的新变化`,
-        objective ? `追查“${objective}”的线索` : '检查与刚才行动有关的线索',
-        hasParty ? '和同行者商量下一步' : '换一种方式处理当前局面',
-      ]
-    : [
-        `Observe what changed around ${location || 'this place'}`,
-        objective ? `Trace a clue about “${objective}”` : 'Inspect clues connected to the last action',
-        hasParty ? 'Discuss the next move with your companions' : 'Try another approach to the current situation',
-      ]
-  return labels.map((label, index) => ({ id: `recovery-${save.scene}-${index}`, label }))
+export function createRecoveryChoices(save: Pick<StorySave, 'scene' | 'location' | 'objective' | 'partyMemberIds' | 'danger'>, cartridge: StoryCartridge): StorySave['choices'] {
+  if (save.danger.phase !== 'calm' && save.danger.currentThreat) {
+    const threat = shortChoiceContext(save.danger.currentThreat, cartridge.locale === 'zh' ? 16 : 30)
+    return (cartridge.dangerDirector?.methods ?? []).map((method, index) => ({
+      id: `recovery-danger-${save.scene}-${index}`,
+      label: cartridge.locale === 'zh' ? `针对“${threat}”：${method}` : `Against “${threat}”: ${method}`,
+    }))
+  }
+  return []
 }
 
 function validChoiceLabels(labels: string[]): string[] {
@@ -575,7 +569,8 @@ export function applyParsedScene(
   // Ordinary scenes must remain playable even when an AI response omits or
   // truncates its machine-readable choices. A real checkpoint may still use
   // the dedicated resume action supplied by the Composer.
-  if (!next.sessionEnded && next.choices.length < 2) next.choices = createRecoveryChoices(next, cartridge)
+  if (!domainResolution && !next.sessionEnded && next.choices.length) next.choices = filterGroundedChoices(next.choices, { ...next, choices: save.choices, blocks: [...next.blocks, ...effects] }, cartridge)
+  if (!next.sessionEnded && next.choices.length === 0) next.choices = createRecoveryChoices(next, cartridge)
 
   const image = chooseSceneImage(save, next, adjudicatedParsed, cartridge, imagePrompt, imageSubject, actionId, domainResolution?.visualBeat)
   const milestone = milestoneReason(adjudicatedParsed, dangerDirective)
