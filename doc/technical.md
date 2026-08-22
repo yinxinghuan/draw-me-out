@@ -118,3 +118,6 @@
 ## 行动权威影子审计（2026-08-20）
 
 `engine/authorityShadow.ts` 只观察当前阶段已经显示的选择，以现有确定性 `domainRules` 分类 `accepted / rejected / open` 并报告非终局空 tray。它不改 cinematic 阶段流、不补选项、不写存档或上传数据；页面内存最多保留 100 条，`?authority_shadow=0` 可关闭。运行 `npm run test:authority-shadow` 验证选择零改写。
+## 2026-08-23 混合音频升级
+
+本作保留 `latent` 自适应合成材质，并叠加专属超现实主题与空间环境声。生成式长音频负责世界质感，Web Audio 继续负责精确交互、潜层张力和数值反馈；手势解锁、静音、页面可见性、自然回放间隔与失败降级由统一播放器管理。
