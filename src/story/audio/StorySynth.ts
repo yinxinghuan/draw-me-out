@@ -4,7 +4,12 @@ export type StoryAudioCue = StoryAudioCueName
 
 type AudioContextConstructor = typeof AudioContext
 type StoppableNode = AudioBufferSourceNode | OscillatorNode
-const MAX_TRANSIENT_VOICES = 14
+const MAX_TRANSIENT_VOICES = 6
+
+export const SFX_OUTPUT_PROFILE = {
+  gainScale: .52,
+  minimumCueIntervalSeconds: .18,
+} as const
 
 export const SYNTH_AMBIENT_PROFILE = {
   textureSeconds: 19,
@@ -15,7 +20,7 @@ export const SYNTH_AMBIENT_PROFILE = {
 export const RECORDED_SOUND_PROFILE = {
   musicRepeatDelayMs: 30_000,
   ambienceRepeatDelayMs: 7_000,
-  maxCueVoices: 4,
+  maxCueVoices: 2,
   featureCooldownMs: 180_000,
 } as const
 
@@ -93,6 +98,7 @@ export class StorySynth {
   private ambientConnections: AudioNode[] = []
   private ambientDetailTimer: number | null = null
   private activeVoices = 0
+  private lastCueStartedAt = -Infinity
   private stateListener: ((running: boolean) => void) | null = null
   private locationId = ''
   private recordedMusic: HTMLAudioElement | null = null
@@ -193,6 +199,8 @@ export class StorySynth {
     const context = this.context
     const theme = this.theme
     if (!context || !theme || this.muted || context.state !== 'running') return
+    if (context.currentTime - this.lastCueStartedAt < SFX_OUTPUT_PROFILE.minimumCueIntervalSeconds) return
+    this.lastCueStartedAt = context.currentTime
     if (this.playRecordedCue(cue)) return
     this.playSynthCue(cue)
   }
@@ -392,7 +400,8 @@ export class StorySynth {
     if (isFeature && !isRecordedFeatureReady(track, Boolean(this.recordedFeatureVoice), lastPlayed)) return false
     const element = this.createRecordedElement(track)
     if (!element) return false
-    element.volume = clampUnit(this.theme?.levels.master ?? 0) * safeTrackGain(track)
+    const cueScale = isFeature ? 1 : SFX_OUTPUT_PROFILE.gainScale
+    element.volume = clampUnit(this.theme?.levels.master ?? 0) * safeTrackGain(track) * cueScale
     this.recordedCueVoices.add(element)
     if (isFeature) {
       this.clearRecordedTimer('music')
@@ -487,7 +496,7 @@ export class StorySynth {
     ramp(this.master.gain, this.muted ? 0 : this.theme.levels.master)
     ramp(this.music.gain, this.theme.levels.music)
     ramp(this.ambient.gain, this.theme.levels.ambient)
-    ramp(this.sfx.gain, this.theme.levels.sfx)
+    ramp(this.sfx.gain, this.theme.levels.sfx * SFX_OUTPUT_PROFILE.gainScale)
   }
 
   private startAmbient(): void {
@@ -675,7 +684,7 @@ export class StorySynth {
   private metalStrike(level: number, delay = 0, muted = false): void {
     const base = muted ? 610 : 760
     const duration = muted ? .22 : .42
-    ;[1, 1.47, 2.13, 2.76].forEach((ratio, index) => {
+    ;[1, 1.82].forEach((ratio, index) => {
       const partial = base * ratio
       this.tone('sfx', partial, partial * (muted ? .985 : .997), duration * (1 - index * .11), 'sine', level * (1 - index * .2), delay + index * .004)
     })
