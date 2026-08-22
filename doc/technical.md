@@ -28,7 +28,7 @@
 - `src/story/engine/endingDirector.ts`、`endingAdapter.ts`：冻结终局快照、计算可用能力、约束 AI 生成兼容尾声。
 - `src/story/adapters/`：本地演示、AIGram 正式叙事，以及兼容旧 `chat_id` 入口的适配器；两种正式入口都只调用稳定的 AlterU game-chat 网关，不依赖模型提供商或测试机地址。AIGram 适配器对本游戏额外注入“普通玩家语言合同”，将内部 ID 与玩家可见词汇隔离。
 - `src/shared/runtime/media.ts`：统一媒体服务 v1 客户端、尺寸拟合、幂等请求、任务轮询与结构化错误。
-- `src/shared/runtime/useGenImage.ts`：图片请求状态、重复请求 ID 管理、60 秒任务上限和显式旧 transit 回退。
+- `src/shared/runtime/useGenImage.ts`：图片请求状态、重复请求 ID 管理、60 秒任务上限和独立媒体服务内的超时恢复；不跨服务回退。
 - `src/shared/runtime/useGenVideo.ts`：统一媒体服务 9:16、5 秒视频任务客户端；本游戏默认不启用。
 - `src/shared/save/useGameSave.ts`：AIGram 与 localStorage 双路径存档。
 - `public/alteru-storage-scope.js`、`src/alteru-storage-scope.d.ts`：按当前部署 UUID 隔离浏览器存储，防止同域游戏和 Remix 互相读取本地状态。
