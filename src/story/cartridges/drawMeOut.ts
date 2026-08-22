@@ -8,6 +8,7 @@ const coverImage = new URL('../img/worlds/draw-me-out.png', import.meta.url).hre
 const entryImage = new URL('../img/worlds/draw-me-out-entry.png', import.meta.url).href
 const audioThemeUrl = new URL('../audio/assets/theme.mp3', import.meta.url).href
 const audioAmbienceUrl = new URL('../audio/assets/ambience.mp3', import.meta.url).href
+const audioFeatureUrl = new URL('../audio/assets/feature.mp3', import.meta.url).href
 
 function build(locale: Locale): StoryCartridge {
   const zh = locale === 'zh'
@@ -486,7 +487,7 @@ function build(locale: Locale): StoryCartridge {
       accent: '#2f63d8', danger: '#ff4b35', gold: '#168d77', material: 'wayfarer',
     },
     audioTheme: {
-      recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .28 } },
+      recorded: { music: { src: audioThemeUrl, gain: .18 }, ambience: { src: audioAmbienceUrl, gain: .28 }, cues: { discovery: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, relationship: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 }, summary: { src: audioFeatureUrl, gain: .17, role: 'feature', cooldownMs: 180_000 } } },
       material: 'latent', bpm: 78, rootHz: 110, scale: [0, 2, 3, 7, 9],
       levels: { music: .14, ambient: .17, sfx: .44, master: .48 },
       tension: [
