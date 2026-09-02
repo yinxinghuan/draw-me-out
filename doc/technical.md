@@ -17,6 +17,7 @@
 - `src/story/cartridges/drawMeOut.ts`：中英文世界合同、数值、章节、危险导演、结局能力、角色、地图、视觉与音频方向。
 - `src/story/cartridges/drawMeOutCampaign.ts`：开场五幕与第一次图片世界往返的本地可玩切片。
 - `src/story/engine/campaignDirector.ts`：四世界主线与终局闸门；把当前战役阶段、具体行动、可见后果、唯一线索和下一组合法行动组织成可重载的确定性回合。
+- `src/story/engine/executeTurn.ts`：与 React、DOM、媒体和存储解耦的服务端普通回合权威边界，保持 campaign → domain → model 的优先级。
 - `src/story/engine/reducer.ts`：唯一状态更新入口；维护物品、伙伴、地图、关系、事实、场景图和结局状态；`ensureEndingImageBlock` 将终局提示幂等地转换为一张可恢复的结局图片块。
 - `src/story/engine/domainRules.ts`：自由文本意图匹配、前置条件裁判、原子效果、固定后续选择、派生线索事实与道具次数显示。
 - `src/story/engine/protocol.ts`：解析 `[choices]`、`[widget]`、`[inventory]`、`[fact]`、`[party_change]` 等结构化命令，并清除括号完整或缺失的 `image_prompt / image_subject` 传输元数据。
@@ -43,6 +44,8 @@
 - `_qa/`：协议、危险、结局、普通玩家语言、领域规则恶意输出、开场分支、逐回合重载的四世界战役测试，以及 390×844 / 320×568 完整浏览器游玩证据；`generate-ending-image-sample.ts` 使用正式媒体服务复验终局 `edit` 请求。
 
 ## 3. 核心模块
+
+`executeStoryTurn()` 把 `resolveCampaignAction → resolveDomainAction → model` 的原优先级和最终 reducer 提交抽成 Story Session 可调用的纯边界；受管 campaign/domain 行动仍完全绕过模型。`_qa/server-turn-pipeline.ts` 验证开场领域事务、输入不变性和自由模型提议。电影式 `decision → resolving → result → decision` 仍由 `StoryShell.tsx` 呈现，终局快照/生成仍是独立第二阶段事务。当前仅为源码 canary，正式写入仍等待后端可验证的 AlterU 玩家身份。
 
 ### 状态与叙事循环
 

@@ -24,7 +24,8 @@
     "test:campaign-director": "tsx _qa/campaign-director.ts",
     "qa:ending-media": "tsx _qa/generate-ending-image-sample.ts",
     "test:authority-shadow": "node --import tsx _qa/authority-shadow.ts",
-    "test:loop-escape": "node --import tsx _qa/loop-escape.ts"
+    "test:loop-escape": "node --import tsx _qa/loop-escape.ts",
+    "test:server-turn": "node --import tsx _qa/server-turn-pipeline.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
