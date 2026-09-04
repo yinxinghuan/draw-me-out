@@ -19,7 +19,7 @@
   ],
   "verified": [
     "campaign resolution precedes domain resolution and governed campaign/domain actions bypass the model",
-    "the authored entry action commits through the real reducer before enrollment",
+    "the authored entry action commits through the real reducer as the first authoritative turn after enrollment",
     "old-save enrollment and pending action envelopes persist before network writes",
     "unknown ordinary-turn outcomes reconcile by cursor and action id with one commit",
     "two Node processes share owner-scoped WAL SQLite and recover after response loss plus process termination",
