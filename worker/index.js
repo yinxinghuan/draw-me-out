@@ -2341,11 +2341,11 @@ Six radically different color-and-motion clusters return to the blank. The photo
 }
 
 // src/story/cartridges/drawMeOut.ts
-var coverImage = new URL("../img/worlds/draw-me-out.png", import.meta.url).href;
-var entryImage = new URL("../img/worlds/draw-me-out-entry.png", import.meta.url).href;
-var audioThemeUrl = new URL("../audio/assets/theme.mp3", import.meta.url).href;
-var audioAmbienceUrl = new URL("../audio/assets/ambience.mp3", import.meta.url).href;
-var audioFeatureUrl = new URL("../audio/assets/feature.mp3", import.meta.url).href;
+var coverImage = new URL("../img/worlds/draw-me-out.png", "https://story-session.invalid/worker/index.js").href;
+var entryImage = new URL("../img/worlds/draw-me-out-entry.png", "https://story-session.invalid/worker/index.js").href;
+var audioThemeUrl = new URL("../audio/assets/theme.mp3", "https://story-session.invalid/worker/index.js").href;
+var audioAmbienceUrl = new URL("../audio/assets/ambience.mp3", "https://story-session.invalid/worker/index.js").href;
+var audioFeatureUrl = new URL("../audio/assets/feature.mp3", "https://story-session.invalid/worker/index.js").href;
 function build(locale) {
   const zh = locale === "zh";
   const s = (cn, en) => zh ? cn : en;
