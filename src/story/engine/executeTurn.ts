@@ -3,7 +3,7 @@ import { resolveCampaignAction } from './campaignDirector'
 import { buildDangerDirective } from './dangerDirector'
 import { resolveDomainAction } from './domainRules'
 import { parseStoryProtocol } from './protocol'
-import { applyParsedScene } from './reducer'
+import { applyParsedScene, enterStory } from './reducer'
 
 export interface StoryTurnGenerator {
   send(action: string, context: AdapterContext): Promise<AdapterResult>
@@ -27,6 +27,10 @@ export async function executeStoryTurn(options: {
   const cartridge = options.cartridge
   const locale = options.locale ?? cartridge.locale
   const base = options.save
+  const entryAction = cartridge.opening.entryAction?.trim()
+  if (!base.entered && base.scene === 0 && !base.lastActionId && entryAction && action === entryAction) {
+    return { save: enterStory(base, cartridge), source: 'domain' }
+  }
   const campaignResolution = resolveCampaignAction(base, cartridge, action)
   const ruleResolution = campaignResolution ? undefined : resolveDomainAction(base, cartridge, action)
   const domainResolution = campaignResolution ?? ruleResolution

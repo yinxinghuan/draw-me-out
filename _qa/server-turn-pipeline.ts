@@ -14,6 +14,7 @@ const domain = await executeStoryTurn({
 })
 assert.equal(domain.source, 'domain')
 assert.equal(domainModelCalls, 0)
+assert.equal(domain.save.entered, true)
 assert.equal(domain.save.scene, initial.scene + 1)
 assert.equal(domain.save.stats.compute, initial.stats.compute - 4)
 assert.equal(domain.save.facts['rain-is-pixels'], true)

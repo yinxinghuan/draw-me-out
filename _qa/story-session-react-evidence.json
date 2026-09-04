@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "game": "draw-me-out",
+  "capturedAt": "2026-09-04T19:45:00+08:00",
+  "stage": "local-react-canary-passed",
+  "productionDefaultChanged": false,
+  "productionWrites": false,
+  "liveModelCalled": false,
+  "liveMediaCalled": false,
+  "reactMounted": true,
+  "identityMode": "synthetic-loopback-qa-token",
+  "tests": [
+    "all 21 package-registered test:* scripts",
+    "npm run build",
+    "strict UI audit",
+    "public-secret audit",
+    "Remix API-base audit",
+    "self-hosted storage audit",
+    "Story Session capability audit",
+    "production-bundle marker exclusion",
+    "git diff --check"
+  ],
+  "screenshots": [
+    "_qa/ui/platform-layout-draw-me-out-session-decision-zh-390x844.png",
+    "_qa/ui/platform-layout-draw-me-out-session-history-zh-390x844.png",
+    "_qa/ui/platform-layout-draw-me-out-ending-recovered-zh-390x844.png",
+    "_qa/ui/platform-layout-draw-me-out-session-history-en-320x568.png",
+    "_qa/ui/platform-layout-draw-me-out-session-decision-zh-390x844-recheck.png",
+    "_qa/ui/platform-layout-draw-me-out-session-history-zh-390x844-recheck.png",
+    "_qa/ui/platform-layout-draw-me-out-ending-recovered-zh-390x844-recheck.png",
+    "_qa/ui/platform-layout-draw-me-out-session-history-en-320x568-recheck.png",
+    "_qa/ui/external-guest-entry-390x844.png"
+  ],
+  "verified": [
+    "the real cinematic StoryGameView mounts one Story Session journal writer in an isolated loopback-only QA entry",
+    "the authored touch-rain entry persists entered=true, domain facts, stat cost and scene advancement in one authoritative transaction",
+    "campaign resolution remains ahead of domain and model resolution",
+    "decision-resolving-result-decision preserves the committed result before exposing the next choices",
+    "an unknown ordinary-turn response survives reload, blocks new actions and reconciles to exactly one committed turn",
+    "a recovered committed turn returns to result presentation before next choices become visible",
+    "a real four-world campaign ending fixture reaches finale.ready through the existing campaign reducer",
+    "an unknown ending response survives reload and commits exactly one generated ending without incrementing the ordinary cursor",
+    "restart creates a new journey while retaining the previous journey for explicit switching",
+    "owner and locale session directories remain isolated",
+    "session rows are 52 CSS pixels high and Chinese 390x844 plus English 320x568 avoid horizontal overflow",
+    "matched first-pass and recheck captures have no P0 or P1 visual findings",
+    "the existing external guest entry remains the release-overlay reference and did not influence platform-layout composition",
+    "the production wrapper continues to use the original runtime and the production bundle excludes local Story Session lab markers",
+    "all package regressions, TypeScript/Vite build and required audits pass"
+  ],
+  "notVerified": [
+    "backend-verifiable AlterU identity",
+    "production database and Worker adapter",
+    "real accounts, devices, model calls or media calls",
+    "recoverable Story Session media transactions",
+    "server-controlled cohort, rollback, deployment or live traffic"
+  ]
+}

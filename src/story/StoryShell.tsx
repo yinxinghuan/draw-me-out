@@ -9,6 +9,19 @@ import { usePlayerProfile, type PlayerProfile } from './usePlayerProfile'
 import { useAvatarImageReference } from './useAvatarImageReference'
 import { useStoryAudio } from './audio/useStoryAudio'
 import { selectStageOverlay } from './engine/stageNarrative'
+import type { StorySessionDirectory } from './session/storySessionClient'
+
+export type StoryEngineView = ReturnType<typeof useStoryEngine> & {
+  actionBlocked?: boolean
+  fixedSource?: boolean
+  fixedLocale?: boolean
+  preservesSessionOnRestart?: boolean
+  listSessions?: () => Promise<StorySessionDirectory>
+  switchSession?: (sessionId: string) => Promise<void>
+  sessionId?: string
+  cursor?: number
+  presentCommittedResultVersion?: number
+}
 
 function useInitialCartridge() {
   return new URLSearchParams(window.location.search).get('cartridge')
@@ -119,7 +132,7 @@ function cartridgeForUi(cartridge: StoryCartridge, uiVariant: UiVariant): StoryC
 }
 
 function ConversationHeader({ cartridge, engine, audio, openWorld, openHistory, textSize, setTextSize, uiVariant }: {
-  cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine>; audio: ReturnType<typeof useStoryAudio>; openWorld: (active?: DrawerId, detail?: WorldDetail) => void; openHistory: () => void; textSize: TextSize; setTextSize: (size: TextSize) => void; uiVariant: UiVariant
+  cartridge: StoryCartridge; engine: StoryEngineView; audio: ReturnType<typeof useStoryAudio>; openWorld: (active?: DrawerId, detail?: WorldDetail) => void; openHistory: () => void; textSize: TextSize; setTextSize: (size: TextSize) => void; uiVariant: UiVariant
 }) {
   const audioActive = audio.supported && audio.active
   return <header className="st-chat-header">
@@ -184,7 +197,7 @@ function StoryBlockView({ block, cartridge, retryImage, player }: { block: Story
 }
 
 function ConversationFeed({ cartridge, engine, feedRef, endRef, onScroll, player }: {
-  cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine>;
+  cartridge: StoryCartridge; engine: StoryEngineView;
   feedRef: React.RefObject<HTMLDivElement>; endRef: React.RefObject<HTMLDivElement>; onScroll: () => void; player: PlayerProfile
 }) {
   return <div className="st-conversation" ref={feedRef} onScroll={onScroll}>
@@ -316,7 +329,7 @@ function visualWorldId(block: StoryBlock | undefined): string {
 
 function CinematicStage({ cartridge, engine, player, previewScene, onReturnLatest, onDecisionReadyChange, onResultReadyChange, uiVariant, turnPhase, lastAction }: {
   cartridge: StoryCartridge
-  engine: ReturnType<typeof useStoryEngine>
+  engine: StoryEngineView
   player: PlayerProfile
   previewScene: number | null
   onReturnLatest: () => void
@@ -455,7 +468,7 @@ function Storyboard({ cartridge, save, close, select }: { cartridge: StoryCartri
   </div>
 }
 
-function Composer({ cartridge, engine, onAct, uiVariant }: { cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine>; onAct: (action: string) => void; uiVariant: UiVariant }) {
+function Composer({ cartridge, engine, onAct, uiVariant }: { cartridge: StoryCartridge; engine: StoryEngineView; onAct: (action: string) => void; uiVariant: UiVariant }) {
   const [custom, setCustom] = useState('')
   const repliesRef = useRef<HTMLDivElement>(null)
   useEffect(() => { repliesRef.current?.scrollTo({ left: 0, behavior: 'auto' }) }, [engine.save.scene])
@@ -485,7 +498,7 @@ function Composer({ cartridge, engine, onAct, uiVariant }: { cartridge: StoryCar
   </section>
 }
 
-function EndingExperience({ cartridge, engine }: { cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine> }) {
+function EndingExperience({ cartridge, engine }: { cartridge: StoryCartridge; engine: StoryEngineView }) {
   const finale = engine.save.finale
   if (finale.status === 'idle' || finale.epilogueActive) return null
   if (finale.status !== 'complete' || !finale.ending) return <div className="st-ending-gate" role="status" aria-live="polite">
@@ -494,7 +507,10 @@ function EndingExperience({ cartridge, engine }: { cartridge: StoryCartridge; en
       <h2>{finale.status === 'generating' ? t(cartridge.locale, 'endingGenerating') : t(cartridge.locale, 'writeEnding')}</h2>
       {engine.progress && <div className="st-ending-gate__progress"><i style={{ width: `${engine.progress.percent ?? 36}%` }} /><span>{engine.progress.label}</span></div>}
       {finale.error && <p>{finale.error}</p>}
-      {finale.status !== 'generating' && <button type="button" disabled={engine.busy} onClick={engine.generateEnding}>{t(cartridge.locale, 'writeEnding')}<Icon name="arrow" /></button>}
+      {engine.error && <p data-ending-error>{engine.error}</p>}
+      {engine.canRetry
+        ? <button type="button" disabled={engine.busy} onClick={engine.retryAction}>{t(cartridge.locale, 'retry')}<Icon name="arrow" /></button>
+        : finale.status !== 'generating' && <button type="button" disabled={engine.busy || engine.actionBlocked} onClick={engine.generateEnding}>{t(cartridge.locale, 'writeEnding')}<Icon name="arrow" /></button>}
     </section>
   </div>
   const ending = finale.ending
@@ -551,7 +567,7 @@ function DetailMetrics({ rows }: { rows: Array<{ label: string; value: string | 
 }
 
 function PlayerDetail({ player, save, cartridge, focusedStatId, openSection }: {
-  player: PlayerProfile; save: ReturnType<typeof useStoryEngine>['save']; cartridge: StoryCartridge; focusedStatId?: string; openSection: (id: DrawerId) => void
+  player: PlayerProfile; save: StoryEngineView['save']; cartridge: StoryCartridge; focusedStatId?: string; openSection: (id: DrawerId) => void
 }) {
   const itemCount = save.inventory.reduce((total, item) => total + item.count, 0)
   return <div className="st-world-detail st-player-detail">
@@ -627,20 +643,47 @@ function ItemDetail({ item, cartridge }: { item: InventoryItem; cartridge: Story
 }
 
 function SystemDetail({ cartridge, engine, restart }: {
-  cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine>; restart: () => void
+  cartridge: StoryCartridge; engine: StoryEngineView; restart: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
+  const [sessions, setSessions] = useState<StorySessionDirectory['sessions']>([])
+  const [directoryState, setDirectoryState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [switching, setSwitching] = useState('')
+  const loadSessions = async () => {
+    if (!engine.listSessions) return
+    setDirectoryState('loading')
+    try { setSessions((await engine.listSessions()).sessions); setDirectoryState('ready') }
+    catch { setDirectoryState('error') }
+  }
+  useEffect(() => { void loadSessions() }, [engine.sessionId])
+  const switchTo = async (sessionId: string) => {
+    if (!engine.switchSession || sessionId === engine.sessionId) return
+    setSwitching(sessionId)
+    try { await engine.switchSession(sessionId) } catch { setDirectoryState('error') } finally { setSwitching('') }
+  }
+  const savedSessions = sessions.filter(entry => entry.locale === cartridge.locale)
   return <div className="st-world-detail">
     <DetailSection label={t(cartridge.locale, 'system')}><p>{t(cartridge.locale, 'segmentSaved', { n: engine.save.scene + 1 })}</p></DetailSection>
     <DetailMetrics rows={[{ label: t(cartridge.locale, 'here'), value: engine.save.location }, { label: t(cartridge.locale, 'system'), value: engine.save.time }]} />
+    {engine.listSessions && engine.switchSession && <section className="st-session-history">
+      <small>{t(cartridge.locale, 'sessionHistoryTitle')}</small><p>{t(cartridge.locale, 'sessionHistoryDescription')}</p>
+      {directoryState === 'loading' && <p role="status">{t(cartridge.locale, 'sessionHistoryLoading')}</p>}
+      {directoryState === 'error' && <button className="st-session-history__retry" onClick={() => void loadSessions()}>{t(cartridge.locale, 'sessionHistoryError')}</button>}
+      {directoryState === 'ready' && savedSessions.length === 0 && <p>{t(cartridge.locale, 'sessionHistoryEmpty')}</p>}
+      {savedSessions.length > 0 && <div className="st-session-history__list">{savedSessions.map(entry => {
+        const current = entry.session_id === engine.sessionId
+        const updated = entry.updated_at > 0 ? new Intl.DateTimeFormat(cartridge.locale === 'zh' ? 'zh-CN' : 'en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(entry.updated_at) : t(cartridge.locale, 'sessionHistoryLegacy')
+        return <button key={entry.session_id} onClick={() => void switchTo(entry.session_id)} disabled={current || engine.busy || Boolean(switching)} aria-current={current ? 'true' : undefined}><span><strong>{t(cartridge.locale, 'sessionHistoryScene', { n: entry.scene + 1 })}</strong><small>{updated}</small></span><b>{current ? t(cartridge.locale, 'sessionHistoryCurrent') : t(cartridge.locale, 'sessionHistorySwitch')}</b></button>
+      })}</div>}
+    </section>}
     <section className="st-world-restart">
       <small>{t(cartridge.locale, 'startOver')}</small>
-      <p>{t(cartridge.locale, 'startOverDescription')}</p>
+      <p>{t(cartridge.locale, engine.preservesSessionOnRestart ? 'sessionRestartDescription' : 'startOverDescription')}</p>
       {engine.busy && <p className="st-world-restart__busy" role="status">{t(cartridge.locale, 'startOverBusy')}</p>}
       {!confirming
         ? <button className="st-world-restart__open" onClick={() => setConfirming(true)} disabled={engine.busy}>{t(cartridge.locale, 'startOver')}</button>
         : <div className="st-world-restart__confirm" role="alert">
-          <p>{t(cartridge.locale, 'startOverWarning')}</p>
+          <p>{t(cartridge.locale, engine.preservesSessionOnRestart ? 'sessionRestartWarning' : 'startOverWarning')}</p>
           <div><button onClick={() => setConfirming(false)}>{t(cartridge.locale, 'startOverCancel')}</button><button className="is-danger" onClick={restart}>{t(cartridge.locale, 'startOverConfirm')}</button></div>
         </div>}
     </section>
@@ -648,7 +691,7 @@ function SystemDetail({ cartridge, engine, restart }: {
 }
 
 function WorldDrawer({ active, setActive, detail, setDetail, cartridge, engine, close, player }: {
-  active: DrawerId; setActive: (id: DrawerId) => void; detail: WorldDetail | null; setDetail: (detail: WorldDetail | null) => void; cartridge: StoryCartridge; engine: ReturnType<typeof useStoryEngine>; close: () => void; player: PlayerProfile
+  active: DrawerId; setActive: (id: DrawerId) => void; detail: WorldDetail | null; setDetail: (detail: WorldDetail | null) => void; cartridge: StoryCartridge; engine: StoryEngineView; close: () => void; player: PlayerProfile
 }) {
   const save = engine.save
   const character = detail?.type === 'character' ? save.characters.find((entry) => entry.id === detail.id) : undefined
@@ -682,12 +725,7 @@ function WorldDrawer({ active, setActive, detail, setDetail, cartridge, engine, 
   </section></div>
 }
 
-function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: { cartridge: StoryCartridge; mode: StoryMode; chatId?: string; onSelect: (id: string) => void; onLocaleChange: (locale: Locale) => void; uiVariant: UiVariant }) {
-  const player = usePlayerProfile()
-  const imageWidth = cartridge.mediaDirector?.imageTarget.width ?? 640
-  const imageHeight = cartridge.mediaDirector?.imageTarget.height ?? 360
-  const imageIdentity = useAvatarImageReference(player.imageRefUrl, player.loaded, imageWidth, imageHeight)
-  const engine = useStoryEngine(cartridge, mode, chatId, imageIdentity)
+export function StoryGameView({ cartridge, engine, player, onSelect, onLocaleChange, uiVariant }: { cartridge: StoryCartridge; engine: StoryEngineView; player: PlayerProfile; onSelect: (id: string) => void; onLocaleChange: (locale: Locale) => void; uiVariant: UiVariant }) {
   const audio = useStoryAudio(cartridge, engine.save)
   const [worldOpen, setWorldOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -731,11 +769,11 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
   useEffect(() => {
     if (!engine.loaded || restoredSaveChecked.current) return
     restoredSaveChecked.current = true
-    setShowResumeLatest(engine.save.scene > 0)
-  }, [engine.loaded, engine.save.scene])
+    setShowResumeLatest(engine.save.scene > 0 && engine.save.finale.status === 'idle')
+  }, [engine.loaded, engine.save.finale.status, engine.save.scene])
 
   useEffect(() => {
-    if (turnPhase === 'resolving' && engine.error) {
+    if (engine.save.entered && turnPhase !== 'result' && engine.error) {
       setTurnPhase('result')
       return
     }
@@ -750,7 +788,14 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
   }, [engine.busy, engine.error, engine.save.scene, turnPhase])
 
   useEffect(() => {
-    if (engine.save.scene === 0 && !engine.busy) {
+    if (!engine.presentCommittedResultVersion) return
+    submittedScene.current = Math.max(0, engine.save.scene - 1)
+    setResultNarrativeReady(false)
+    setTurnPhase('result')
+  }, [engine.presentCommittedResultVersion])
+
+  useEffect(() => {
+    if (engine.save.scene === 0 && !engine.busy && !engine.error) {
       setTurnPhase('decision')
       setLastAction('')
     }
@@ -873,7 +918,7 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
         ? <button type="button" className={`ct-turn-next ${uiVariant === 'civic' ? 'ct-civic-next' : 'ct-living-next'}`} onClick={() => { setDecisionNarrativeReady(false); setTurnPhase('decision'); setLastAction('') }}><span><small>{t(cartridge.locale, 'resultReady')}</small><strong>{t(cartridge.locale, 'showNextChoices')}</strong></span><Icon name="arrow" /></button>
         : null
   const civicViewportState = previewScene != null ? 'is-preview' : `is-${turnPhase}${engine.error ? ' has-error' : ''}`
-  return <main className={`st-shell st-shell--${cartridge.theme.material}`} data-text-size={textSize} style={setCssTheme(cartridge)}>
+  return <main className={`st-shell st-shell--${cartridge.theme.material}`} data-text-size={textSize} data-turn-phase={turnPhase} style={setCssTheme(cartridge)}>
     <ConversationHeader cartridge={cartridge} engine={engine} audio={audio} openWorld={openWorld} openHistory={() => setHistoryOpen(true)} textSize={textSize} setTextSize={setTextSize} uiVariant={uiVariant} />
     {uiVariant === 'civic'
       ? <section className={`ct-civic-viewport ${civicViewportState}`} aria-label={t(cartridge.locale, 'currentScene')}>{stage}{controls}</section>
@@ -888,6 +933,15 @@ function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: 
     {worldOpen && <WorldDrawer active={worldTab} setActive={setWorldTab} detail={worldDetail} setDetail={setWorldDetail} cartridge={cartridge} engine={engine} close={() => setWorldOpen(false)} player={player} />}
     {historyOpen && <Storyboard cartridge={cartridge} save={engine.save} close={() => setHistoryOpen(false)} select={setPreviewScene} />}
   </main>
+}
+
+function Game({ cartridge, mode, chatId, onSelect, onLocaleChange, uiVariant }: { cartridge: StoryCartridge; mode: StoryMode; chatId?: string; onSelect: (id: string) => void; onLocaleChange: (locale: Locale) => void; uiVariant: UiVariant }) {
+  const player = usePlayerProfile()
+  const imageWidth = cartridge.mediaDirector?.imageTarget.width ?? 640
+  const imageHeight = cartridge.mediaDirector?.imageTarget.height ?? 360
+  const imageIdentity = useAvatarImageReference(player.imageRefUrl, player.loaded, imageWidth, imageHeight)
+  const engine = useStoryEngine(cartridge, mode, chatId, imageIdentity)
+  return <StoryGameView cartridge={cartridge} engine={engine} player={player} onSelect={onSelect} onLocaleChange={onLocaleChange} uiVariant={uiVariant} />
 }
 
 export default function StoryShell() {

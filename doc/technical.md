@@ -28,7 +28,7 @@
 - `src/story/engine/imageIdentity.ts`：`SUBJECT A` 完整视觉身份合同与 2400 字符提示上限。
 - `src/story/engine/endingDirector.ts`、`endingAdapter.ts`：冻结终局快照、计算可用能力、约束 AI 生成兼容尾声。
 - `server/storySessionLab.ts`：本机 loopback-only、owner-scoped WAL SQLite Story Session 权威服务实验。
-- `src/story/session/storySessionClient.ts` / `storySessionJournal.ts`：HTTP 合同、请求前 checkpoint、未知普通回合/终局恢复、显式迁移和旧旅程切换。
+- `src/story/session/storySessionClient.ts` / `storySessionJournal.ts` / `useStorySessionEngine.ts`：HTTP 合同、请求前 checkpoint、未知普通回合/终局恢复、显式迁移、旧旅程切换和隔离 React canary 引擎。
 - `src/story/adapters/`：本地演示、AIGram 正式叙事，以及兼容旧 `chat_id` 入口的适配器；两种正式入口都只调用稳定的 AlterU game-chat 网关，不依赖模型提供商或测试机地址。AIGram 适配器对本游戏额外注入“普通玩家语言合同”，将内部 ID 与玩家可见词汇隔离。
 - `src/shared/runtime/media.ts`：统一媒体服务 v1 客户端、尺寸拟合、幂等请求、任务轮询与结构化错误。
 - `src/shared/runtime/useGenImage.ts`：图片请求状态、重复请求 ID 管理、60 秒任务上限和独立媒体服务内的超时恢复；不跨服务回退。
@@ -49,7 +49,9 @@
 
 `executeStoryTurn()` 把 `resolveCampaignAction → resolveDomainAction → model` 的原优先级和最终 reducer 提交抽成 Story Session 可调用的纯边界；受管 campaign/domain 行动仍完全绕过模型。`_qa/server-turn-pipeline.ts` 验证开场领域事务、输入不变性和自由模型提议。电影式 `decision → resolving → result → decision` 仍由 `StoryShell.tsx` 呈现，终局快照/生成仍是独立第二阶段事务。
 
-`server/storySessionLab.ts`、`src/story/session/storySessionClient.ts` 与 `storySessionJournal.ts` 构成当前 `local-client-canary-passed`。服务只监听 loopback，以 owner-scoped WAL SQLite 原子保存 snapshot、version、普通 cursor/event、action/enrollment cache、hash-only migration audit 和独立 ending cache；两个 Node 进程验证同版本竞争、精确重放、事务回滚、提交后丢响应、强杀重开与 owner 隔离。客户端在网络前保存 enrollment、ordinary pending 和独立 pending-ending，未知结果先读取权威 head，再决定清除或重放同一编号。
+`server/storySessionLab.ts`、`src/story/session/storySessionClient.ts`、`storySessionJournal.ts` 与 QA-only `useStorySessionEngine.ts` 构成当前 `local-react-canary-passed`。服务只监听 loopback，以 owner-scoped WAL SQLite 原子保存 snapshot、version、普通 cursor/event、action/enrollment cache、hash-only migration audit 和独立 ending cache；两个 Node 进程验证同版本竞争、精确重放、事务回滚、提交后丢响应、强杀重开与 owner 隔离。客户端在网络前保存 enrollment、ordinary pending 和独立 pending-ending，未知结果先读取权威 head，再决定清除或重放同一编号。
+
+真实 `StoryGameView` 可接收注入式 engine；正式 `Game` wrapper 仍实例化原 `useStoryEngine`，生产默认未切换。隔离 QA 入口只使用一个 journal writer，系统页读取 owner/locale 隔离的最小旅程目录；重开创建新 session 并保留旧 session，切换失败不覆盖当前 checkpoint。精确入口动作由 `executeStoryTurn()` 识别后复用 `enterStory()`，在同一服务端事务中提交 `entered=true`、余力变化、`rain-is-pixels` 和第一场景，避免“状态已结算但界面仍在封面”。
 
 旧存档修复只能显式调用固定迁移 `draw-me-out-save-v8-repair-2026-09-04`：普通 GET 只读，浏览器不能上传目标 snapshot，服务从已存权威快照运行 `normalizeSave()`；成功只增加 session version，不制造剧情 cursor/event。终局测试使用真实四世界确定性战役跑到 `finale.ready`，再以独立 ending id 绑定服务端重新冻结的 snapshot；恢复不会重复生成，也不会增加普通回合数。当前生产入口、云存档、媒体和 Worker 默认均未改变，正式写入仍等待后端可验证的 AlterU 玩家身份。
 
