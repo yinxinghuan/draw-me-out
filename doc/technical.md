@@ -5,10 +5,10 @@
 - 前端：React 18 + TypeScript，使用 Vite 5 构建，`base: './'`，可部署在任意子路径。
 - 样式：Less；默认界面为 Cinematic Civic 竖版舞台，`?ui=living` 可切换到保留的对话流分支用于对照。
 - 状态：纯 TypeScript reducer、协议解析器、战役导演与领域规则裁判。四个主线世界、四条线索、终局揭示和永久代价由本地原子事务更新；开放行动才交给 AI，因此必要因果不依赖模型是否遵守协议。
-- 叙事：演示模式使用本地双语剧情切片；正式 AlterU 模式仅为主线外的开放行动调用 `https://chat.aiwaves.tech/aigram/api/game-chat`，每次附带压缩后的世界合同和持久状态。
+- 叙事：演示模式使用本地双语剧情切片；正式 AlterU 模式由同 UUID Worker 的 Story Session 权威执行每回合，受管规则在服务端直接结算，主线外开放行动再由 Worker 调用 `https://chat.aiwaves.tech/aigram/api/game-chat`。
 - 图片：统一调用 AlterU Media Service `https://game.aiwaves.tech/alteru-media/api/v1/images/generations`。首页使用独立 1024×576 无人物建立镜头；运行时剧情场景为 512×640。玩家主导画面使用 `edit` + 原始公开头像 URL；环境、物品和 NPC 主导画面使用无参考的 `text`。
 - 视频：客户端已接入统一媒体服务的 5 秒、9:16 任务合同，但本游戏当前关闭自动视频；现有 4:5 剧情图不能作为合规的 9:16 首尾帧直接提交。后续只有准备独立 9:16 里程碑帧后才启用。
-- 存档：游戏永久 UUID 为 `c699e284-58a9-43ca-8edf-223cd69588c9`。平台内同步 AIGram 游戏存档，平台外使用 localStorage 回退。
+- 存档：游戏永久 UUID 为 `c699e284-58a9-43ca-8edf-223cd69588c9`。剧情权威快照、版本、事件与幂等结果保存在 Durable Object SQLite；AIGram 游戏存档只同步匿名能力令牌和旧存档回滚副本，平台外使用按 UUID 隔离的 localStorage 回退。
 - 音频：Web Audio 合成器；第一次用户交互后启动，根据材质、BPM、三项状态和事件类型生成环境、选择、危险与奖励反馈。
 - 国际化：轻量 `zh/en` 双语，优先显式 `?lang=`、已保存语言和 `game_locale`，再按浏览器系统语言判断。
 
@@ -35,8 +35,8 @@
 - `src/shared/runtime/useGenVideo.ts`：统一媒体服务 9:16、5 秒视频任务客户端；本游戏默认不启用。
 - `src/shared/save/useGameSave.ts`：AIGram 与 localStorage 双路径存档。
 - `public/alteru-storage-scope.js`、`src/alteru-storage-scope.d.ts`：按当前部署 UUID 隔离浏览器存储，防止同域游戏和 Remix 互相读取本地状态。
-- `worker/index.js`：自托管部署的最小健康检查入口；不保存剧情、身份或媒体数据，也不创建第二套后端状态。
-- `src/shared/runtime/game-id.ts`：从 Remix 后的当前 UUID 生成同源 `/<GAME_ID>` API base；当前只为可选健康检查保留合同，不参与平台存档、叙事或媒体请求。
+- `worker/source.ts`、`worker/storySessionRuntime.ts`：Story Session Worker 源码；按 owner 隔离会话，原子提交回合/结局，保存事件、幂等缓存和媒体 URL overlay。`scripts/build-story-worker.mjs` 在每次构建后生成可部署的 `worker/index.js`。
+- `src/shared/runtime/game-id.ts`：从 Remix 后的当前 UUID 生成同源 `/<GAME_ID>` API base，Story Session 请求统一使用该前缀；禁止写死旧 UUID。
 - `src/story/StoryShell.tsx`：入口、恢复存档、三阶段信息顺序、Civic 舞台、抽屉、分页、选项和输入；结局态从持久图片块渲染 4:5 主视觉、加载/失败重试和分层尾声。
 - `src/story/story.less`：Civic/Living 两种表现层、响应式布局、状态和动效；结局页的终局图、显影底板、52 px 文末 CTA 与 20 px 箭头均在此约束。
 - `src/story/audio/`：合成音乐与音效。
@@ -53,7 +53,7 @@
 
 真实 `StoryGameView` 可接收注入式 engine；正式 `Game` wrapper 仍实例化原 `useStoryEngine`，生产默认未切换。隔离 QA 入口只使用一个 journal writer，系统页读取 owner/locale 隔离的最小旅程目录；重开创建新 session 并保留旧 session，切换失败不覆盖当前 checkpoint。精确入口动作由 `executeStoryTurn()` 识别后复用 `enterStory()`，在同一服务端事务中提交 `entered=true`、余力变化、`rain-is-pixels` 和第一场景，避免“状态已结算但界面仍在封面”。
 
-旧存档修复只能显式调用固定迁移 `draw-me-out-save-v8-repair-2026-09-04`：普通 GET 只读，浏览器不能上传目标 snapshot，服务从已存权威快照运行 `normalizeSave()`；成功只增加 session version，不制造剧情 cursor/event。终局测试使用真实四世界确定性战役跑到 `finale.ready`，再以独立 ending id 绑定服务端重新冻结的 snapshot；恢复不会重复生成，也不会增加普通回合数。当前生产入口、云存档、媒体和 Worker 默认均未改变，正式写入仍等待后端可验证的 AlterU 玩家身份。
+旧存档在首次 Story Session enrollment 时由服务端 `normalizeSave()` 规范化；普通 GET 只读。终局以独立 ending id 绑定服务端重新冻结的 snapshot；恢复不会重复生成，也不会增加普通回合数。生产默认已切换到 Story Session；`?story_runtime=legacy` 和历史 `chat_id` 入口保留旧引擎作为紧急回滚路径。
 
 ### 状态与叙事循环
 
@@ -107,7 +107,9 @@
 
 ### 存档与恢复
 
-平台内通过 session UUID 读写 AIGram 游戏存档；浏览器直开使用 `stateful-story-draw-me-out-save` 与归档键回退，所有浏览器键在真实存储中自动加上 `alteru:<当前部署 UUID>:` 前缀。有进度再次进入时只出现一次“继续游戏 / 重新开始”；继续直接进入当前场景，重新开始二次确认并清除本世界存档。
+正式剧情状态以 Worker 的 Story Session 为真源。客户端首次创建 256-bit 随机能力令牌，并把它作为 `StoryArchive.storySession` 的附加字段写入现有 AIGram 游戏存档；令牌只用于持有者隔离，当前不能证明真实 AlterU 用户身份。新设备同步到相同令牌后，会从 owner 会话目录恢复最近会话；浏览器直开使用按 UUID 隔离的 localStorage。旧 `worlds` 归档始终保留，便于 `?story_runtime=legacy` 回滚，不会被 enrollment 删除。
+
+客户端在提交前先把 action id、期望版本和旧 cursor 写入本地 journal；未知网络结果会先读取权威事件再决定是否补交。服务端对 enrollment、普通回合和结局分别做 owner-scoped 幂等缓存，版本冲突零写入。场景图仍通过平台媒体服务生成，但 request id 在浏览器恢复，成功 CDN URL 再写入 Story Session 的独立 media overlay；媒体完成不增加剧情版本，也不改写历史事件。
 
 ## 4. 扩展点
 

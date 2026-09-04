@@ -6,10 +6,11 @@ import { buildEndingSnapshot } from '../engine/endingDirector'
 import { t } from '../i18n'
 import { StorySessionRequestError, type StorySessionHead } from './storySessionClient'
 import { StorySessionJournal } from './storySessionJournal'
+import { useStorySessionMedia } from './useStorySessionMedia'
 
 /** Isolated local cinematic UI canary. It never calls the legacy cloud writer, live model or media service. */
-export function useStorySessionEngine(options: { cartridge: StoryCartridge; journal: StorySessionJournal; scope: string; initialSave: StorySave }): StoryEngineView & { sessionId?: string; version?: number; cursor?: number } {
-  const { cartridge, journal, scope, initialSave } = options
+export function useStorySessionEngine(options: { cartridge: StoryCartridge; journal: StorySessionJournal; scope: string; initialSave: StorySave; imageIdentity?: { ready: boolean; refUrl?: string } }): StoryEngineView & { sessionId?: string; version?: number; cursor?: number } {
+  const { cartridge, journal, scope, initialSave, imageIdentity = { ready: true } } = options
   const [head, setHead] = useState<StorySessionHead>()
   const headRef = useRef<StorySessionHead>()
   const [busy, setBusy] = useState(true)
@@ -49,6 +50,7 @@ export function useStorySessionEngine(options: { cartridge: StoryCartridge; jour
     } finally { running.current = false; if (mounted.current) { setBusy(false); setPendingAction('') } }
   }, [adopt, cartridge, initialSave, journal, scope])
   useEffect(() => { mounted.current = true; void run('open'); return () => { mounted.current = false } }, [run])
+  const media = useStorySessionMedia({ cartridge, head, journal, identity: imageIdentity, adopt })
 
   const finishEnding = useCallback(async () => {
     if (running.current || blocked || !headRef.current || !['ready', 'failed'].includes(headRef.current.snapshot.finale.status)) return
@@ -69,7 +71,7 @@ export function useStorySessionEngine(options: { cartridge: StoryCartridge; jour
     } finally { running.current = false; if (mounted.current) setBusy(false) }
   }, [adopt, blocked, cartridge, journal, scope])
 
-  const snapshot = head?.snapshot ?? initialSave
+  const snapshot = media.save ?? head?.snapshot ?? initialSave
   const save: StorySave = {
     ...snapshot,
     finale: epilogueActive && snapshot.finale.status === 'complete' ? { ...snapshot.finale, epilogueActive: true } : snapshot.finale,
@@ -101,7 +103,7 @@ export function useStorySessionEngine(options: { cartridge: StoryCartridge; jour
     act: async action => { if (!blocked && !running.current && save.entered) await run('act', action) },
     generateEnding: async () => { await finishEnding() },
     continueEpilogue: () => { if (!blocked && save.finale.status === 'complete') setEpilogueActive(true) },
-    retryAction: () => { void run('open') }, useAigramFallback: () => {}, retryImage: () => {}, prepareInventoryImages: () => {},
+    retryAction: () => { void run('open') }, useAigramFallback: () => {}, retryImage: media.retry, prepareInventoryImages: media.prepareInventory,
     restartWorld: () => { if (!blocked && !running.current) void run('restart') }, clear: async () => {},
     listSessions, switchSession, sessionId: head?.session_id, version: head?.version, cursor: head?.cursor, presentCommittedResultVersion,
   }

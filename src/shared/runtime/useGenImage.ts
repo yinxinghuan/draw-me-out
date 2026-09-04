@@ -3,6 +3,7 @@ import { getGameUuid } from './game-id'
 import { createMediaRequestId, generateImageMedia, MediaServiceError } from './media'
 
 export interface GenImageRequest {
+  requestId?: string
   prompt: string
   ref_url?: string
   requestedSize: { width: number; height: number }
@@ -15,14 +16,14 @@ export function useGenImage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const pendingRequestIds = useRef(new Map<string, string>())
-  const generate = useCallback(async ({ prompt, ref_url, requestedSize, profile, referenceMode = 'edit', timeoutMs }: GenImageRequest) => {
+  const generate = useCallback(async ({ requestId: suppliedRequestId, prompt, ref_url, requestedSize, profile, referenceMode = 'edit', timeoutMs }: GenImageRequest) => {
     setLoading(true); setError(null)
     try {
       const sessionId = getGameUuid()
       if (!sessionId) throw new Error('draw-me-out media: game UUID is unavailable')
       {
         const requestKey = JSON.stringify({ prompt, ref_url, requestedSize, profile, referenceMode })
-        const requestId = pendingRequestIds.current.get(requestKey) ?? createMediaRequestId()
+        const requestId = suppliedRequestId ?? pendingRequestIds.current.get(requestKey) ?? createMediaRequestId()
         pendingRequestIds.current.set(requestKey, requestId)
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), Math.max(1, timeoutMs ?? 60_000))

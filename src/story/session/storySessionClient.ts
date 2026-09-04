@@ -214,6 +214,13 @@ export class StorySessionClient {
       return checkedHead(await this.transport.request(path, { method: 'POST', body }), pending.session_id)
     }
   }
+
+  async attachMedia(sessionId: string, entityId: string, requestId: string, kind: 'block' | 'inventory', url: string) {
+    return checkedHead(await this.transport.request(
+      `/api/story/sessions/${encodeURIComponent(sessionId)}/media/${encodeURIComponent(entityId)}`,
+      { method: 'POST', body: JSON.stringify({ request_id: requestId, kind, url }) },
+    ), sessionId)
+  }
 }
 
 function stableEndingId(value: string) { return /^[A-Za-z0-9_-]{1,128}$/.test(value) }

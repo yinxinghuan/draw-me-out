@@ -82,7 +82,7 @@ ${repairErrors.length ? `\nREPAIR THE FOLLOWING VALIDATION ERRORS WITHOUT CHANGI
 
 async function requestCandidate(cartridge: StoryCartridge, snapshot: StoryEndingSnapshot, repairErrors: string[]): Promise<StoryEndingCandidate> {
   const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 60000)
+  const timeout = globalThis.setTimeout(() => controller.abort(), 60000)
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -97,7 +97,7 @@ async function requestCandidate(cartridge: StoryCartridge, snapshot: StoryEnding
     const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
     return parseCandidate(String(payload.choices?.[0]?.message?.content ?? ''))
   } finally {
-    window.clearTimeout(timeout)
+    globalThis.clearTimeout(timeout)
   }
 }
 

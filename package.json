@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-  "preview": "vite preview",
+    "build": "tsc && vite build && node scripts/build-story-worker.mjs",
+    "preview": "vite preview",
   "test:one-shot-audio": "node --import tsx _qa/one-shot-audio.ts",
     "test:protocol": "TMPDIR=/private/tmp tsx _qa/protocol.ts",
     "test:danger": "TMPDIR=/private/tmp tsx _qa/danger-director.ts",
