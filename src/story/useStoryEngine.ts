@@ -101,7 +101,7 @@ function recoverPersistedChoices(candidate: LegacyStorySave, cartridge: StoryCar
   }
 }
 
-function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge: StoryCartridge, incomingChatId?: string): StorySave {
+export function normalizeSave(candidate: LegacyStorySave | null | undefined, cartridge: StoryCartridge, incomingChatId?: string): StorySave {
   if (!candidate || candidate.cartridgeId !== cartridge.id || !Array.isArray(candidate.blocks)) return createInitialSave(cartridge, incomingChatId)
   if (incomingChatId && candidate.remoteChatId && candidate.remoteChatId !== incomingChatId) return createInitialSave(cartridge, incomingChatId)
   const repaired = recoverPersistedChoices(repairMockLoop(candidate, cartridge), cartridge)

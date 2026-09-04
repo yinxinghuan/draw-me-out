@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "game": "draw-me-out",
+  "capturedAt": "2026-09-04T19:10:00+08:00",
+  "stage": "local-client-canary-passed",
+  "productionDefaultChanged": false,
+  "productionWrites": false,
+  "liveModelCalled": false,
+  "liveMediaCalled": false,
+  "identityMode": "synthetic-loopback-qa-token",
+  "tests": [
+    "all 20 package-registered test:* scripts",
+    "npm run build",
+    "public-secret audit",
+    "Remix API-base audit",
+    "self-hosted storage audit",
+    "Story Session capability audit",
+    "git diff --check"
+  ],
+  "verified": [
+    "campaign resolution precedes domain resolution and governed campaign/domain actions bypass the model",
+    "the authored entry action commits through the real reducer before enrollment",
+    "old-save enrollment and pending action envelopes persist before network writes",
+    "unknown ordinary-turn outcomes reconcile by cursor and action id with one commit",
+    "two Node processes share owner-scoped WAL SQLite and recover after response loss plus process termination",
+    "transaction failure rolls back snapshot, cache, event and audit atomically",
+    "owner-scoped bounded journey directory returns metadata only and retains old sessions across restart",
+    "explicit server-side v8 repair keeps normal GET read-only and increments version without story cursor or event",
+    "migration replay remains idempotent across competing authorities and database restart",
+    "a real deterministic four-world campaign fixture reaches the authored finale gate",
+    "ending uses a separate stable ending id bound to a server-frozen snapshot",
+    "ending checkpoint survives unknown response and reconciles without regeneration or ordinary cursor increment",
+    "production wrapper, cloud save, media path and production bundle remain unchanged"
+  ],
+  "notVerified": [
+    "real React StoryGameView session flow",
+    "backend-verifiable AlterU identity",
+    "production database and Worker adapter",
+    "real accounts, devices, model calls or media calls",
+    "recoverable Story Session media transactions",
+    "server-controlled cohort, rollback, deployment or live traffic"
+  ]
+}
