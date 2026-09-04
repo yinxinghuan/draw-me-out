@@ -23,9 +23,10 @@ export function useStorySessionMedia(options: {
   head?: StorySessionHead
   journal: StorySessionJournal
   identity: MediaIdentity
+  enabled?: boolean
   adopt(head: StorySessionHead): void
 }) {
-  const { cartridge, head, journal, identity, adopt } = options
+  const { cartridge, head, journal, identity, adopt, enabled = Boolean(head?.snapshot.entered) } = options
   const { generate } = useGenImage()
   const [active, setActive] = useState<string>()
   const [failed, setFailed] = useState<Record<string, true>>({})
@@ -34,7 +35,7 @@ export function useStorySessionMedia(options: {
   const candidate = useMemo(() => head ? nextMedia(head.snapshot, queuedItems) : undefined, [head, queuedItems])
 
   useEffect(() => {
-    if (!head || !head.snapshot.entered || !candidate || active || failed[candidate.entityId]) return
+    if (!head || !enabled || !candidate || active || failed[candidate.entityId]) return
     if (candidate.playerVisible && (!identity.ready || !identity.refUrl)) return
     const key = `${head.session_id}:${candidate.entityId}`
     if (attempted.current.has(key)) return
@@ -43,25 +44,29 @@ export function useStorySessionMedia(options: {
     const requestId = alteruLocalStorage.getItem(storageKey) || createMediaRequestId()
     alteruLocalStorage.setItem(storageKey, requestId)
     setActive(candidate.entityId)
-    const target = cartridge.mediaDirector?.imageTarget ?? { width: 640, height: 360 }
-    void generate({
+    const mediaDirector = (cartridge as StoryCartridge & { mediaDirector?: { imageTarget?: { width: number; height: number }; imageProfile?: 'fast-small' | 'standard' } }).mediaDirector
+    const target = mediaDirector?.imageTarget ?? { width: 640, height: 360 }
+    void (generate as unknown as (request: Record<string, unknown>) => Promise<string | { url: string }>)({
       requestId,
       prompt: candidate.kind === 'inventory'
         ? `${candidate.prompt}. Isolated story inventory object, no text, no UI, consistent with ${cartridge.sceneImageDirection ?? cartridge.theme.material}.`
         : candidate.prompt,
       ...(candidate.playerVisible && identity.refUrl ? { ref_url: identity.refUrl } : {}),
       requestedSize: target,
-      profile: cartridge.mediaDirector?.imageProfile ?? 'fast-small',
+      width: target.width,
+      height: target.height,
+      profile: mediaDirector?.imageProfile ?? 'fast-small',
       referenceMode: 'edit',
       timeoutMs: 60_000,
-    }).then(async url => {
+    }).then(async result => {
+      const url = typeof result === 'string' ? result : result.url
       const next = await journal.attachMedia(head.session_id, candidate.entityId, requestId, candidate.kind, url)
       alteruLocalStorage.removeItem(storageKey)
       setQueuedItems(current => { const nextItems = new Set(current); nextItems.delete(candidate.entityId); return nextItems })
       adopt(next)
     }).catch(() => setFailed(current => ({ ...current, [candidate.entityId]: true })))
       .finally(() => setActive(undefined))
-  }, [active, adopt, candidate, cartridge, failed, generate, head, identity, journal])
+  }, [active, adopt, candidate, cartridge, enabled, failed, generate, head, identity, journal])
 
   const retry = useCallback((entityId: string) => {
     if (!head) return

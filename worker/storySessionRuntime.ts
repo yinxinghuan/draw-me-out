@@ -30,6 +30,7 @@ interface RuntimeOptions {
   generator: any
   generateEnding?: (cartridge: any, save: StorySave) => Promise<{ ending: any; snapshot: any; usedFallback: boolean; errors: string[] }>
   buildEndingSnapshot?: (save: StorySave, cartridge: any) => { id: string }
+  applyMutation?: (save: StorySave, mutation: unknown) => StorySave
 }
 
 const json = (value: unknown, status = 200) => Response.json(value, { status })
@@ -77,6 +78,10 @@ export function createStorySessionRuntime(options: RuntimeOptions) {
           session_id TEXT NOT NULL, entity_id TEXT NOT NULL, request_id TEXT NOT NULL,
           kind TEXT NOT NULL, url TEXT NOT NULL, created_at INTEGER NOT NULL,
           PRIMARY KEY(session_id, entity_id), UNIQUE(session_id, request_id)
+        );
+        CREATE TABLE IF NOT EXISTS mutation_cache (
+          owner TEXT NOT NULL, mutation_id TEXT NOT NULL, request_hash TEXT NOT NULL,
+          response_json TEXT NOT NULL, PRIMARY KEY(owner, mutation_id)
         );
       `)
     }
@@ -218,6 +223,32 @@ export function createStorySessionRuntime(options: RuntimeOptions) {
               error: generated.usedFallback && generated.errors.length ? generated.errors.join('; ') : undefined } }
             this.write(locked, now); response = this.view(locked)
             this.sql.exec('INSERT INTO ending_cache VALUES (?, ?, ?, ?)', owner, body.ending_id, requestHash, JSON.stringify(response))
+          })
+          return json(response)
+        }
+
+        const mutation = url.pathname.match(/^\/api\/story\/sessions\/([^/]+)\/mutations$/)
+        if (mutation && request.method === 'POST') {
+          if (!options.applyMutation) return error('MUTATION_UNAVAILABLE', 404)
+          const sessionId = decodeURIComponent(mutation[1]); const current = this.session(sessionId, owner)
+          if (!current) return error('SESSION_NOT_FOUND', 404)
+          const body = await request.json() as Record<string, any>
+          if (!stableId(body.mutation_id) || !safeInt(body.expected_version) || body.ruleset_version !== current.rulesetVersion || !body.mutation) return error('INVALID_MUTATION')
+          const requestHash = await digest({ expected_version: body.expected_version, ruleset_version: body.ruleset_version, mutation: body.mutation })
+          const cached = this.one('SELECT request_hash, response_json FROM mutation_cache WHERE owner = ? AND mutation_id = ?', owner, body.mutation_id)
+          if (cached) return cached.request_hash === requestHash ? json(JSON.parse(cached.response_json)) : error('MUTATION_ID_CONFLICT', 409)
+          if (body.expected_version !== current.version) return error('VERSION_CONFLICT', 409)
+          let response: any
+          this.ctx.storage.transactionSync(() => {
+            const locked = this.session(sessionId, owner); if (!locked || locked.version !== current.version) throw new Error('VERSION_CONFLICT')
+            const next = options.applyMutation!(structuredClone(locked.snapshot), body.mutation)
+            if (!this.validSave(next)) throw new Error('INVALID_MUTATION_RESULT')
+            locked.version += 1; locked.cursor += 1; locked.snapshot = next
+            const event = { seq: locked.cursor, version: locked.version, action_id: body.mutation_id, source: 'external' }
+            locked.events.push(event); this.write(locked, now)
+            this.sql.exec('INSERT INTO events VALUES (?, ?, ?, ?, ?)', sessionId, event.seq, event.version, event.action_id, event.source)
+            response = this.view(locked)
+            this.sql.exec('INSERT INTO mutation_cache VALUES (?, ?, ?, ?)', owner, body.mutation_id, requestHash, JSON.stringify(response))
           })
           return json(response)
         }

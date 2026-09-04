@@ -96,6 +96,16 @@ export class StorySessionJournal {
       return head
     })
   }
+  mutate(mutationId: string, mutation: unknown, displayed?: Pick<StorySessionHead, 'session_id' | 'version'>): Promise<StorySessionHead> {
+    return this.exclusive(async () => {
+      const checkpoint = this.load()
+      if (!checkpoint?.head || checkpoint.pending || checkpoint.pendingEnding) throw new Error('SESSION_BUSY')
+      if (displayed && (displayed.session_id !== checkpoint.head.session_id || displayed.version !== checkpoint.head.version)) throw new StorySessionRequestError(409, 'VERSION_CONFLICT')
+      const head = await this.client.mutate(checkpoint.head, mutationId, mutation)
+      this.save({ schema: 1, scope: this.scope, head })
+      return head
+    })
+  }
   peek() { const checkpoint = this.load(); return { head: checkpoint?.head, pending: checkpoint?.pending, pendingEnding: checkpoint?.pendingEnding, enrolling: Boolean(checkpoint?.enrollment) } }
   /** Retain the old server session; a confirmed restart creates a separate one. */
   restart(initialSave: StorySave): Promise<StorySessionHead> {

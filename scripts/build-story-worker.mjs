@@ -6,6 +6,7 @@ await build({
   bundle: true,
   format: 'esm',
   platform: 'browser',
+  external: ['cloudflare:workers'],
   target: 'es2022',
   // Cartridge modules declare browser-only asset URLs with import.meta.url.
   // The authority never serves those assets, but Cloudflare still evaluates

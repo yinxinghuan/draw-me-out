@@ -6,7 +6,7 @@ export interface GenImageRequest {
   requestId?: string
   prompt: string
   ref_url?: string
-  requestedSize: { width: number; height: number }
+  requestedSize?: { width: number; height: number }
   profile?: 'fast-small' | 'standard'
   referenceMode?: 'edit' | 'avatar'
   timeoutMs?: number
@@ -22,7 +22,10 @@ export function useGenImage() {
       const sessionId = getGameUuid()
       if (!sessionId) throw new Error('draw-me-out media: game UUID is unavailable')
       {
-        const requestKey = JSON.stringify({ prompt, ref_url, requestedSize, profile, referenceMode })
+        const target = requestedSize ?? (/inventory artifact plate|still life|object only|square composition/i.test(prompt)
+          ? { width: 640, height: 640 }
+          : { width: 768, height: 576 })
+        const requestKey = JSON.stringify({ prompt, ref_url, requestedSize: target, profile, referenceMode })
         const requestId = suppliedRequestId ?? pendingRequestIds.current.get(requestKey) ?? createMediaRequestId()
         pendingRequestIds.current.set(requestKey, requestId)
         const controller = new AbortController()
@@ -37,7 +40,7 @@ export function useGenImage() {
             mode: ref_url ? referenceMode : 'text',
             prompt,
             referenceUrls: ref_url ? [ref_url] : [],
-            size: requestedSize,
+            size: target,
           }, { timeoutMs, signal: controller.signal })
           pendingRequestIds.current.delete(requestKey)
           return task.media.url
@@ -62,5 +65,6 @@ export function useGenImage() {
       const next = cause instanceof Error ? cause : new Error(String(cause)); setError(next); throw next
     } finally { setLoading(false) }
   }, [])
-  return { generate, loading, error }
+  const beginNewIntent = useCallback(() => { pendingRequestIds.current.clear(); setError(null) }, [])
+  return { generate, beginNewIntent, loading, error }
 }

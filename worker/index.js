@@ -6503,6 +6503,10 @@ function createStorySessionRuntime(options) {
           kind TEXT NOT NULL, url TEXT NOT NULL, created_at INTEGER NOT NULL,
           PRIMARY KEY(session_id, entity_id), UNIQUE(session_id, request_id)
         );
+        CREATE TABLE IF NOT EXISTS mutation_cache (
+          owner TEXT NOT NULL, mutation_id TEXT NOT NULL, request_hash TEXT NOT NULL,
+          response_json TEXT NOT NULL, PRIMARY KEY(owner, mutation_id)
+        );
       `);
     }
     ctx;
@@ -6661,6 +6665,36 @@ function createStorySessionRuntime(options) {
             this.write(locked, now);
             response2 = this.view(locked);
             this.sql.exec("INSERT INTO ending_cache VALUES (?, ?, ?, ?)", owner, body2.ending_id, requestHash2, JSON.stringify(response2));
+          });
+          return json(response2);
+        }
+        const mutation = url.pathname.match(/^\/api\/story\/sessions\/([^/]+)\/mutations$/);
+        if (mutation && request.method === "POST") {
+          if (!options.applyMutation) return error("MUTATION_UNAVAILABLE", 404);
+          const sessionId2 = decodeURIComponent(mutation[1]);
+          const current2 = this.session(sessionId2, owner);
+          if (!current2) return error("SESSION_NOT_FOUND", 404);
+          const body2 = await request.json();
+          if (!stableId(body2.mutation_id) || !safeInt(body2.expected_version) || body2.ruleset_version !== current2.rulesetVersion || !body2.mutation) return error("INVALID_MUTATION");
+          const requestHash2 = await digest({ expected_version: body2.expected_version, ruleset_version: body2.ruleset_version, mutation: body2.mutation });
+          const cached2 = this.one("SELECT request_hash, response_json FROM mutation_cache WHERE owner = ? AND mutation_id = ?", owner, body2.mutation_id);
+          if (cached2) return cached2.request_hash === requestHash2 ? json(JSON.parse(cached2.response_json)) : error("MUTATION_ID_CONFLICT", 409);
+          if (body2.expected_version !== current2.version) return error("VERSION_CONFLICT", 409);
+          let response2;
+          this.ctx.storage.transactionSync(() => {
+            const locked = this.session(sessionId2, owner);
+            if (!locked || locked.version !== current2.version) throw new Error("VERSION_CONFLICT");
+            const next = options.applyMutation(structuredClone(locked.snapshot), body2.mutation);
+            if (!this.validSave(next)) throw new Error("INVALID_MUTATION_RESULT");
+            locked.version += 1;
+            locked.cursor += 1;
+            locked.snapshot = next;
+            const event = { seq: locked.cursor, version: locked.version, action_id: body2.mutation_id, source: "external" };
+            locked.events.push(event);
+            this.write(locked, now);
+            this.sql.exec("INSERT INTO events VALUES (?, ?, ?, ?, ?)", sessionId2, event.seq, event.version, event.action_id, event.source);
+            response2 = this.view(locked);
+            this.sql.exec("INSERT INTO mutation_cache VALUES (?, ?, ?, ?)", owner, body2.mutation_id, requestHash2, JSON.stringify(response2));
           });
           return json(response2);
         }

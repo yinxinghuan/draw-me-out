@@ -221,6 +221,13 @@ export class StorySessionClient {
       { method: 'POST', body: JSON.stringify({ request_id: requestId, kind, url }) },
     ), sessionId)
   }
+
+  async mutate(head: Pick<StorySessionHead, 'session_id' | 'version' | 'ruleset_version'>, mutationId: string, mutation: unknown) {
+    if (!stableEndingId(mutationId)) throw new Error('INVALID_MUTATION_REQUEST')
+    return checkedHead(await this.transport.request(`/api/story/sessions/${encodeURIComponent(head.session_id)}/mutations`, {
+      method: 'POST', body: JSON.stringify({ mutation_id: mutationId, expected_version: head.version, ruleset_version: head.ruleset_version, mutation }),
+    }), head.session_id)
+  }
 }
 
 function stableEndingId(value: string) { return /^[A-Za-z0-9_-]{1,128}$/.test(value) }
